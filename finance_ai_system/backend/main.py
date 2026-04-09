@@ -1,10 +1,15 @@
 """
 Finance AI System - Main Application Entry Point
 """
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+
+# Base directory of this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 from database import engine, Base
 from routers import upload, ap, ar, reconciliation, reports, ai_query, dashboard, mail
@@ -47,7 +52,7 @@ app.include_router(mail.router, prefix="/api/mail", tags=["Mail"])
 # Serve frontend
 @app.get("/app", include_in_schema=False)
 def frontend():
-    return FileResponse("index.html")
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
 
 @app.get("/")
