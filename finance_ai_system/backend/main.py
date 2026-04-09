@@ -3,6 +3,7 @@ Finance AI System - Main Application Entry Point
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 
 from database import engine, Base
@@ -41,6 +42,12 @@ app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(ai_query.router, prefix="/api/ai", tags=["AI Query"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(mail.router, prefix="/api/mail", tags=["Mail"])
+
+
+# Serve frontend
+@app.get("/app", include_in_schema=False)
+def frontend():
+    return FileResponse("index.html")
 
 
 @app.get("/")
