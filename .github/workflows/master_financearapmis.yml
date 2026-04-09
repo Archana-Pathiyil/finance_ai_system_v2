@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies into antenv
+      - name: Create virtual environment and install dependencies
         run: |
           cd finance_ai_system/backend
           python -m venv antenv
@@ -39,7 +39,6 @@ jobs:
           path: |
             finance_ai_system/backend/
             finance_ai_system/frontend/
-            !finance_ai_system/backend/antenv/
 
   deploy:
     runs-on: ubuntu-latest
@@ -61,7 +60,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9BCE63642DAB4CC69FAD013608661D9C }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EBEE2CB1AF9B4173BA0CF4FAC440FC53 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
