@@ -37,6 +37,7 @@ jobs:
           name: python-app
           path: |
             finance_ai_system/backend/
+            finance_ai_system/frontend/
             !finance_ai_system/backend/antenv/
 
   deploy:
