@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Finance AI MIS System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#F0F2F5;color:#1A2332;min-height:100vh;display:flex}
+
+/* Sidebar */
+#sidebar{width:230px;background:#1D3557;border-right:none;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;box-shadow:2px 0 8px rgba(0,0,0,.12)}
+.logo{padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo-title{font-size:15px;font-weight:700;color:#FFFFFF;display:flex;align-items:center;gap:8px}
+.logo-icon{background:linear-gradient(135deg,#457B9D,#A8DADC);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+nav{flex:1;padding:10px 8px;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:14px 8px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.65);transition:all .15s;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#FFFFFF}
+.nav-item.active{background:rgba(255,255,255,.15);color:#FFFFFF;border-left:3px solid #A8DADC;margin-left:-2px}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.sidebar-foot{padding:12px 14px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.4)}
+
+/* Main */
+#main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{height:56px;background:#FFFFFF;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.topbar-title{font-size:14px;font-weight:700;color:#1A2332}
+.topbar-sub{font-size:11px;color:#64748B;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,#1D3557,#457B9D);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.content{padding:24px;flex:1}
+
+/* Pages */
+.page{display:none}
+.page.active{display:block}
+
+/* KPI Grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;padding:18px;position:relative;overflow:hidden;border-top:3px solid var(--c,#457B9D);box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#64748B;margin-bottom:8px}
+.kpi-value{font-size:20px;font-weight:700;color:#1A2332;font-family:'Courier New',monospace}
+.kpi-icon{position:absolute;top:14px;right:14px;font-size:20px;opacity:.12}
+
+/* Card */
+.card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{font-size:13px;font-weight:600;margin-bottom:14px;color:#1A2332}
+.card-row{display:flex;gap:14px;margin-bottom:16px}
+.card-row .card{flex:1;margin-bottom:0}
+
+/* Table */
+.tbl-wrap{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #E2E8F0;background:#FAFBFC}
+.tbl-title{font-size:13px;font-weight:600;color:#1A2332}
+table{width:100%;border-collapse:collapse}
+th{background:#F8FAFC;padding:9px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#64748B;border-bottom:1px solid #E2E8F0}
+td{padding:10px 14px;font-size:12.5px;color:#374151;border-bottom:1px solid #F1F5F9}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#F8FAFC;color:#1A2332}
+.mono{font-family:'Courier New',monospace;font-size:12px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.04em}
+.badge-green{background:#DCFCE7;color:#15803D}
+.badge-red{background:#FEE2E2;color:#DC2626}
+.badge-amber{background:#FEF3C7;color:#D97706}
+.badge-blue{background:#DBEAFE;color:#1D4ED8}
+.badge-purple{background:#EDE9FE;color:#7C3AED}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s}
+.btn-primary{background:#16A34A;color:#fff}
+.btn-primary:hover{background:#15803D}
+.btn-outline{background:#fff;border:1px solid #CBD5E1;color:#475569}
+.btn-outline:hover{border-color:#457B9D;color:#457B9D}
+.btn-blue{background:#1D4ED8;color:#fff}
+.btn-blue:hover{background:#1E40AF}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* Tabs */
+.tabs{display:flex;gap:3px;background:#E2E8F0;border-radius:8px;padding:3px;margin-bottom:16px;width:fit-content}
+.tab{padding:6px 16px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:#64748B;transition:all .15s}
+.tab.active{background:#FFFFFF;color:#1D3557;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+
+/* Upload */
+.upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.upload-box{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;padding:20px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.upload-zone{border:2px dashed #CBD5E1;border-radius:8px;padding:30px 16px;cursor:pointer;transition:all .2s;margin:12px 0;background:#FAFBFC}
+.upload-zone:hover{border-color:#457B9D;background:#EFF6FF}
+.upload-icon{font-size:28px;margin-bottom:8px}
+.upload-label{font-size:12px;font-weight:600;margin-bottom:4px;color:#1A2332}
+.upload-sub{font-size:11px;color:#64748B}
+input[type=file]{display:none}
+
+/* Recon stats */
+.recon-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.recon-stat{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.recon-val{font-size:26px;font-weight:700;font-family:'Courier New',monospace;color:#1A2332}
+.recon-lbl{font-size:10px;color:#64748B;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+
+/* Chat */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 155px);background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.chat-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;background:#F8FAFC}
+.bubble{max-width:78%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6}
+.bubble.user{background:#1D4ED8;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.bubble.ai{background:#FFFFFF;border:1px solid #E2E8F0;color:#1A2332;align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.chat-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 20px 12px;background:#FFFFFF}
+.chip{padding:5px 11px;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:20px;font-size:11px;color:#475569;cursor:pointer;transition:all .15s}
+.chip:hover{border-color:#457B9D;color:#1D3557;background:#EFF6FF}
+.chat-input-row{display:flex;gap:8px;padding:14px;border-top:1px solid #E2E8F0;background:#FFFFFF}
+.chat-input{flex:1;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:8px;padding:9px 14px;font-size:13px;color:#1A2332;font-family:inherit;outline:none}
+.chat-input:focus{border-color:#457B9D;background:#fff}
+
+/* Bar chart */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding:0 4px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%}
+.bar-col{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .4s ease}
+.bar-label{font-size:10px;color:#64748B;text-align:center;word-break:break-all}
+.bar-val{font-size:9px;color:#94A3B8;font-family:'Courier New',monospace}
+
+/* Pie legend */
+.pie-legend{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.pie-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.pie-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pie-name{color:#64748B;flex:1}
+.pie-pct{color:#1A2332;font-weight:600;font-family:'Courier New',monospace}
+
+/* Ageing bar */
+.age-bar-wrap{margin-bottom:12px}
+.age-bar-top{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;color:#374151}
+.age-bar-bg{height:7px;background:#E2E8F0;border-radius:4px;overflow:hidden}
+.age-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+
+/* Misc */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.section-title{font-size:15px;font-weight:700;color:#1A2332}
+.section-sub{font-size:11px;color:#64748B;margin-top:2px}
+.empty{text-align:center;padding:50px 20px;color:#94A3B8;font-size:13px}
+.empty-icon{font-size:40px;margin-bottom:10px;opacity:.4}
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:#64748B;font-size:13px}
+.spinner{width:16px;height:16px;border:2px solid #E2E8F0;border-top-color:#457B9D;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.notif{position:fixed;bottom:20px;right:20px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:999;animation:slideup .3s ease;color:#1A2332}
+@keyframes slideup{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.flex{display:flex}.gap-2{gap:8px}.mb-3{margin-bottom:12px}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+/* Dashboard filter bar */
+.filter-bar{display:flex;align-items:center;gap:10px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.filter-label{font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.filter-select{background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:6px 10px;font-size:12px;color:#1A2332;font-family:inherit;outline:none;cursor:pointer;min-width:160px}
+.filter-select:focus{border-color:#457B9D}
+.filter-divider{width:1px;height:20px;background:#E2E8F0;margin:0 4px}
+.mis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.mis-card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.mis-val{font-size:18px;font-weight:700;font-family:"Courier New",monospace;margin-bottom:4px;color:#1A2332}
+.mis-lbl{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.06em}
+.rate-wrap{margin-top:8px}.rate-bar-bg{height:5px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-top:4px}
+.rate-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.drill-panel{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.drill-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.drill-kpi{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px}
+.drill-kpi-lbl{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.drill-kpi-val{font-size:15px;font-weight:700;font-family:"Courier New",monospace;color:#1A2332}
+.cf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.cf-card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.cf-val{font-size:20px;font-weight:700;font-family:"Courier New",monospace;color:#1A2332}
+.cf-lbl{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.net-pos{color:#3fb950}.net-neg{color:#f85149}.net-zero{color:#484f58}
+.alert-box{border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+.alert-red{background:#FEF2F2;border:1px solid #FECACA;color:#DC2626}
+.alert-amber{background:#FFFBEB;border:1px solid #FDE68A;color:#D97706}
+.alert-green{background:#F0FDF4;border:1px solid #BBF7D0;color:#16A34A}
+.alert-icon{font-size:16px;flex-shrink:0}
+.dash-section{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;margin:20px 0 12px;display:flex;align-items:center;gap:8px}
+.dash-section::after{content:"";flex:1;height:1px;background:#E2E8F0}
+.forecast-table{width:100%;border-collapse:collapse}
+.forecast-table th{background:#F8FAFC;padding:8px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#64748B;border-bottom:1px solid #E2E8F0}
+.forecast-table td{padding:9px 12px;font-size:12px;color:#374151;border-bottom:1px solid #F1F5F9;font-family:"Courier New",monospace}
+.forecast-table tr:hover td{background:#F8FAFC;color:#1A2332}
+
+/* Mail modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:24px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:14px;font-weight:700;margin-bottom:4px;color:#1A2332}
+.modal-sub{font-size:11px;color:#64748B;margin-bottom:20px}
+.modal-label{font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+.modal-input{width:100%;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:8px 12px;font-size:13px;color:#1A2332;font-family:inherit;outline:none;margin-bottom:12px}
+.modal-input:focus{border-color:#457B9D}
+.modal-textarea{width:100%;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:8px 12px;font-size:12px;color:#374151;font-family:'Courier New',monospace;outline:none;resize:vertical;min-height:180px;margin-bottom:12px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.modal-badge{background:#F1F5F9;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;font-size:11px;color:#64748B;display:inline-flex;align-items:center;gap:5px}
+
+/* Party filter bar inside pages */
+.page-filter{display:flex;align-items:center;gap:10px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;margin-bottom:16px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.pf-label{font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.pf-select{background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:5px 9px;font-size:12px;color:#1A2332;font-family:inherit;outline:none;min-width:150px}
+.pf-select:focus{border-color:#457B9D}
+
+/* Action buttons in table */
+.btn-dl{background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn-dl:hover{background:#DBEAFE}
+.btn-mail{background:#F0FDF4;border:1px solid #BBF7D0;color:#16A34A;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn-mail:hover{background:#DCFCE7}
+
+/* Email preview box */
+.email-preview{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:12px;font-family:'Courier New',monospace;font-size:11px;color:#374151;white-space:pre-wrap;max-height:280px;overflow-y:auto;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-title"><div class="logo-icon">💹</div>FinanceAI</div>
+    <div class="logo-sub">MIS Intelligence Platform</div>
+  </div>
+  <nav id="nav"></nav>
+  <div class="sidebar-foot">v1.0 · AED · Finance Admin</div>
+</div>
+
+<div id="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">Finance Dashboard</div>
+      <div class="topbar-sub" id="page-date"></div>
+    </div>
+    <div class="topbar-right">
+      <span style="font-size:11px;color:#484f58">Admin</span>
+      <div class="avatar">FA</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="page-dashboard" class="page active"></div>
+    <div id="page-ap" class="page"></div>
+    <div id="page-ar" class="page"></div>
+    <div id="page-reconciliation" class="page"></div>
+    <div id="page-reports" class="page"></div>
+    <div id="page-upload" class="page"></div>
+    <div id="page-ai" class="page"></div>
+  </div>
+</div>
+
+<div id="notif-area"></div>
+
+<script>
+const API = 'http://localhost:8000/api';
+const fmt = n => n==null?'—':Number(n).toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtK = n => Number(n)>=1000?(Number(n)/1000).toFixed(1)+'K':Number(n).toFixed(0);
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+async function api(path, opts={}) {
+  try {
+    const r = await fetch(API+path, opts);
+    if(!r.ok) throw new Error(await r.text());
+    return await r.json();
+  } catch(e) { console.error(path,e); return null; }
+}
+
+async function dl(path, filename) {
+  try {
+    const r = await fetch(API+path);
+    const b = await r.blob();
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href=u; a.download=filename; a.click();
+    URL.revokeObjectURL(u);
+  } catch(e) { notify('Download failed: '+e.message,'error'); }
+}
+
+function notify(msg, type='info') {
+  const icons={success:'✅',error:'❌',info:'ℹ️'};
+  const el = document.createElement('div');
+  el.className='notif';
+  el.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('notif-area').appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+
+function badge(s) {
+  const m={matched:'green',unmatched:'red',discrepancy:'amber',overdue:'red',
+    due:'amber',upcoming:'green',processed:'green',pending:'amber',
+    failed:'red','0-30':'green','31-60':'amber','61-90':'red','90+':'purple'};
+  return `<span class="badge badge-${m[s]||'blue'}">${esc(s)}</span>`;
+}
+
+function spin() { return `<div class="loading"><div class="spinner"></div>Loading…</div>`; }
+function empty(icon,msg) { return `<div class="empty"><div class="empty-icon">${icon}</div>${esc(msg)}</div>`; }
+
+function buildTable(cols, rows, emptyMsg='No data found') {
+  if(!rows||rows.length===0) return empty('📋',emptyMsg);
+  return `<table><thead><tr>${cols.map(c=>`<th>${esc(c.label)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td class="${c.cls||''}">${c.fn?c.fn(r):esc(r[c.key]??'—')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+function barChart(data,lk,vk,cols) {
+  if(!data||!data.length) return empty('📊','No chart data — upload files first');
+  const max=Math.max(...data.map(d=>d[vk]||0),1);
+  const c=cols||['#1f6feb','#2ea043','#d29922','#f85149','#bc8cff','#06b0d4'];
+  return `<div class="bar-chart">${data.map((d,i)=>{
+    const pct=Math.round((d[vk]/max)*100);
+    return `<div class="bar-wrap"><div class="bar-val">${fmtK(d[vk]||0)}</div>
+      <div class="bar-col" style="height:${pct}%;background:${c[i%c.length]}"></div>
+      <div class="bar-label">${esc(d[lk])}</div></div>`;
+  }).join('')}</div>`;
+}
+
+function pieChart(data,lk,vk) {
+  if(!data||!data.length) return empty('🥧','No data');
+  const c=['#58a6ff','#3fb950','#d29922','#f85149','#bc8cff','#06b0d4'];
+  const total=data.reduce((s,d)=>s+(d[vk]||0),0)||1;
+  return `<div class="pie-legend">${data.map((d,i)=>`<div class="pie-row">
+    <div class="pie-dot" style="background:${c[i%c.length]}"></div>
+    <span class="pie-name">${esc(d[lk])}</span>
+    <span class="pie-pct">${Math.round((d[vk]/total)*100)}%</span>
+  </div>`).join('')}</div>`;
+}
+
+// ── NAV ───────────────────────────────────────────────────────────
+const NAV = [
+  {id:'dashboard',label:'Dashboard',icon:'🏠',sec:'Main'},
+  {id:'ap',label:'Accounts Payable',icon:'📤',sec:'Finance'},
+  {id:'ar',label:'Accounts Receivable',icon:'📥',sec:'Finance'},
+  {id:'reconciliation',label:'Reconciliation',icon:'⚖️',sec:'Finance'},
+  {id:'reports',label:'Reports',icon:'📊',sec:'Analytics'},
+  {id:'upload',label:'Upload Center',icon:'⬆',sec:'Data'},
+  {id:'ai',label:'AI Assistant',icon:'🤖',sec:'Data'},
+];
+const TITLES = {dashboard:'Finance Dashboard',ap:'Accounts Payable',ar:'Accounts Receivable',
+  reconciliation:'Reconciliation',reports:'Reports',upload:'Upload Center',ai:'AI Assistant'};
+
+function buildNav() {
+  const secs=[...new Set(NAV.map(n=>n.sec))];
+  document.getElementById('nav').innerHTML=secs.map(s=>`
+    <div class="nav-section">${s}</div>
+    ${NAV.filter(n=>n.sec===s).map(n=>`
+      <div class="nav-item" data-page="${n.id}" onclick="goTo('${n.id}')">
+        <span class="nav-icon">${n.icon}</span>${n.label}
+      </div>`).join('')}`).join('');
+}
+
+function goTo(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelector(`[data-page="${id}"]`).classList.add('active');
+  document.getElementById('page-title').textContent=TITLES[id];
+  loadPage(id);
+}
+
+document.getElementById('page-date').textContent=new Date().toLocaleDateString('en-AE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+// State
+let dashVendors=[], dashCustomers=[], dashMonths=[];
+let selVendor='', selCustomer='', selMonth='';
+
+async function loadDashboard() {
+  const el=document.getElementById('page-dashboard');
+  el.innerHTML=spin();
+
+  // Load all data in parallel
+  const [kpis, mis, cf, charts, vendors, customers, months] = await Promise.all([
+    api('/dashboard/kpis'),
+    api('/dashboard/mis'),
+    api('/dashboard/cashflow'),
+    api('/dashboard/charts'),
+    api('/dashboard/vendors'),
+    api('/dashboard/customers'),
+    api('/dashboard/months'),
+  ]);
+
+  dashVendors = vendors||[];
+  dashCustomers = customers||[];
+  dashMonths = months||[];
+
+  const netColor = kpis?.net_position > 0 ? '#3fb950' : kpis?.net_position < 0 ? '#f85149' : '#484f58';
+
+  // ── Build alerts ──
+  let alerts = '';
+  if(cf?.overdue_ap_amount > 0)
+    alerts += `<div class="alert-box alert-red"><span class="alert-icon">⚠️</span><div><strong>Overdue Payables:</strong> AED ${fmt(cf.overdue_ap_amount)} across ${cf.overdue_ap_count} invoice(s) are past due date and need immediate attention.</div></div>`;
+  if(cf?.critical_ar_amount > 0)
+    alerts += `<div class="alert-box alert-amber"><span class="alert-icon">🔴</span><div><strong>Critical Receivables (90+ days):</strong> AED ${fmt(cf.critical_ar_amount)} from ${cf.critical_ar_count} invoice(s) are over 90 days outstanding.</div></div>`;
+  if(mis?.working_capital > 0)
+    alerts += `<div class="alert-box alert-green"><span class="alert-icon">✅</span><div><strong>Positive Working Capital:</strong> AED ${fmt(mis.working_capital)} — receivables exceed payables.</div></div>`;
+
+  el.innerHTML = `
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <span class="filter-label">🔍 Filter By</span>
+      <div class="filter-divider"></div>
+      <span class="filter-label">Month</span>
+      <select class="filter-select" id="dash-month" onchange="onMonthChange(this.value)">
+        <option value="">All Months</option>
+        ${dashMonths.map(m=>`<option value="${m}">${m}</option>`).join('')}
+      </select>
+      <div class="filter-divider"></div>
+      <span class="filter-label">Vendor</span>
+      <select class="filter-select" id="dash-vendor" onchange="onVendorChange(this.value)">
+        <option value="">All Vendors</option>
+        ${dashVendors.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}
+      </select>
+      <div class="filter-divider"></div>
+      <span class="filter-label">Customer</span>
+      <select class="filter-select" id="dash-customer" onchange="onCustomerChange(this.value)">
+        <option value="">All Customers</option>
+        ${dashCustomers.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="resetFilters()" style="margin-left:auto">↺ Reset</button>
+    </div>
+
+    <!-- Alerts -->
+    <div id="dash-alerts">${alerts}</div>
+
+    <!-- KPI Row -->
+    <div class="dash-section">📊 Key Performance Indicators</div>
+    <div class="kpi-grid" id="dash-kpis">
+      ${kpis ? [
+        {l:'Total Payables',v:`AED ${fmt(kpis.total_payables)}`,i:'📤',c:'#58a6ff'},
+        {l:'Total Receivables',v:`AED ${fmt(kpis.total_receivables)}`,i:'📥',c:'#3fb950'},
+        {l:'Due This Month',v:`AED ${fmt(kpis.due_this_month)}`,i:'📅',c:'#d29922'},
+        {l:'Overdue Payables',v:`AED ${fmt(kpis.overdue_payables)}`,i:'⚠️',c:'#f85149'},
+        {l:'Overdue Receivables',v:`AED ${fmt(kpis.overdue_receivables)}`,i:'🔴',c:'#bc8cff'},
+        {l:'Net Position',v:`AED ${fmt(kpis.net_position)}`,i:'⚖️',c:netColor},
+      ].map(k=>`<div class="kpi-card" style="--c:${k.c}">
+        <div class="kpi-label">${k.l}</div>
+        <div class="kpi-value" style="font-size:16px;color:${k.c}">${k.v}</div>
+        <div class="kpi-icon">${k.i}</div>
+      </div>`).join('') : ''}
+    </div>
+
+    <!-- MIS Stats -->
+    <div class="dash-section" id="mis-section-title">📋 MIS Summary — All Time</div>
+    <div id="dash-mis">${renderMIS(mis)}</div>
+
+    <!-- Cashflow Forecast -->
+    <div class="dash-section">💰 Cashflow Insights</div>
+    <div class="cf-grid">
+      <div class="cf-card">
+        <div class="cf-val" style="color:#f85149">AED ${fmt(cf?.total_cash_out_pending)}</div>
+        <div class="cf-lbl">Total Cash Out Pending</div>
+      </div>
+      <div class="cf-card">
+        <div class="cf-val" style="color:#3fb950">AED ${fmt(cf?.total_cash_in_pending)}</div>
+        <div class="cf-lbl">Total Cash In Pending</div>
+      </div>
+      <div class="cf-card">
+        <div class="cf-val" class="${(cf?.total_cash_in_pending-cf?.total_cash_out_pending)>=0?'net-pos':'net-neg'}">
+          AED ${fmt((cf?.total_cash_in_pending||0)-(cf?.total_cash_out_pending||0))}
+        </div>
+        <div class="cf-lbl">Net Cashflow Position</div>
+      </div>
+    </div>
+
+    <!-- Cashflow Forecast Table -->
+    <div class="card mb-3">
+      <div class="card-title">📅 Monthly Cashflow Forecast</div>
+      ${renderForecast(cf?.forecast||[])}
+    </div>
+
+    <!-- Charts Row -->
+    <div class="dash-section">📈 Visual Analytics</div>
+    <div class="card-row">
+      <div class="card">
+        <div class="card-title">AP vs AR — Monthly Volume</div>
+        ${renderStackedBars(mis?.cashflow_trend||[])}
+      </div>
+      <div class="card" style="max-width:260px">
+        <div class="card-title">AR Ageing Breakdown</div>
+        ${pieChart(charts?.ar_ageing_buckets,'bucket','amount')}
+      </div>
+    </div>
+
+    <div class="card-row">
+      <div class="card">
+        <div class="card-title">Top Vendors by Outstanding</div>
+        ${barChart(charts?.top_vendors||[],'vendor_name','total_outstanding',['#bc8cff','#a371f7','#8957e5','#6e40c9','#553098'])}
+      </div>
+      <div class="card">
+        <div class="card-title">Cash Outflow Trend</div>
+        ${barChart(charts?.cash_outflow_trend||[],'month','amount',['#1f6feb','#388bfd','#58a6ff','#79c0ff','#a5d6ff'])}
+      </div>
+    </div>
+
+    <!-- Vendor Drill Down -->
+    <div class="dash-section">🔍 Vendor Analysis</div>
+    <div id="vendor-drill-panel">
+      <div class="card" style="text-align:center;padding:30px">
+        <div style="font-size:28px;margin-bottom:8px">🏭</div>
+        <div style="font-size:13px;color:#8b949e">Select a vendor from the dropdown above to see detailed analysis</div>
+      </div>
+    </div>
+
+    <!-- Customer Drill Down -->
+    <div class="dash-section">🔍 Customer Analysis</div>
+    <div id="customer-drill-panel">
+      <div class="card" style="text-align:center;padding:30px">
+        <div style="font-size:28px;margin-bottom:8px">🏢</div>
+        <div style="font-size:13px;color:#8b949e">Select a customer from the dropdown above to see detailed analysis</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMIS(mis) {
+  if(!mis) return empty('📋','No MIS data available');
+  const apRate = mis.ap_payment_rate||0;
+  const arRate = mis.ar_collection_rate||0;
+  return `
+    <div class="mis-grid">
+      <div class="mis-card">
+        <div class="mis-val" style="color:#58a6ff">AED ${fmt(mis.ap_invoiced)}</div>
+        <div class="mis-lbl">AP Invoiced</div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val" style="color:#3fb950">AED ${fmt(mis.ar_invoiced)}</div>
+        <div class="mis-lbl">AR Invoiced</div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val" style="color:#3fb950">AED ${fmt(mis.ap_paid)}</div>
+        <div class="mis-lbl">AP Paid</div>
+        <div class="rate-wrap">
+          <div style="font-size:10px;color:#484f58">${apRate}% paid</div>
+          <div class="rate-bar-bg"><div class="rate-bar-fill" style="width:${apRate}%;background:#3fb950"></div></div>
+        </div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val" style="color:#58a6ff">AED ${fmt(mis.ar_received)}</div>
+        <div class="mis-lbl">AR Collected</div>
+        <div class="rate-wrap">
+          <div style="font-size:10px;color:#484f58">${arRate}% collected</div>
+          <div class="rate-bar-bg"><div class="rate-bar-fill" style="width:${arRate}%;background:#58a6ff"></div></div>
+        </div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val" style="color:#f85149">AED ${fmt(mis.overdue_ap)}</div>
+        <div class="mis-lbl">Overdue AP</div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val" style="color:#d29922">AED ${fmt(mis.overdue_ar)}</div>
+        <div class="mis-lbl">Overdue AR</div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val ${mis.working_capital>=0?'net-pos':'net-neg'}">AED ${fmt(mis.working_capital)}</div>
+        <div class="mis-lbl">Working Capital</div>
+      </div>
+      <div class="mis-card">
+        <div class="mis-val ${mis.net_cashflow>=0?'net-pos':'net-neg'}">AED ${fmt(mis.net_cashflow)}</div>
+        <div class="mis-lbl">Net Cashflow</div>
+      </div>
+    </div>`;
+}
+
+function renderForecast(forecast) {
+  if(!forecast.length) return empty('📅','No forecast data available');
+  return `<div style="overflow-x:auto"><table class="forecast-table">
+    <thead><tr>
+      <th>Month</th><th>Cash Out (AP Due)</th><th>Cash In (AR Expected)</th><th>Net</th><th>Position</th>
+    </tr></thead>
+    <tbody>${forecast.map(r=>{
+      const net=r.net||0;
+      const cls=net>0?'net-pos':net<0?'net-neg':'net-zero';
+      const bar=Math.min(Math.abs(net)/Math.max(r.cash_in,r.cash_out,1)*100,100);
+      return `<tr>
+        <td style="color:#e6edf3;font-weight:600">${r.month}</td>
+        <td style="color:#f85149">AED ${fmt(r.cash_out)}</td>
+        <td style="color:#3fb950">AED ${fmt(r.cash_in)}</td>
+        <td class="${cls}">AED ${fmt(net)}</td>
+        <td><div style="background:#21262d;border-radius:3px;height:6px;width:80px;overflow:hidden">
+          <div style="height:100%;width:${bar}%;background:${net>=0?'#3fb950':'#f85149'};border-radius:3px"></div>
+        </div></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderStackedBars(trend) {
+  if(!trend||!trend.length) return empty('📊','No trend data available');
+  const maxVal = Math.max(...trend.map(t=>Math.max(t.payables||0,t.receivables||0)),1);
+  return `<div style="display:flex;align-items:flex-end;gap:8px;height:160px;overflow-x:auto;padding-bottom:4px">
+    ${trend.map(t=>{
+      const apH=Math.round(((t.payables||0)/maxVal)*120);
+      const arH=Math.round(((t.receivables||0)/maxVal)*120);
+      return `<div style="display:flex;gap:3px;align-items:flex-end;flex-shrink:0">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="width:14px;height:${apH}px;background:#f85149;border-radius:3px 3px 0 0;min-height:2px" title="AP: AED ${fmt(t.payables)}"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="width:14px;height:${arH}px;background:#3fb950;border-radius:3px 3px 0 0;min-height:2px" title="AR: AED ${fmt(t.receivables)}"></div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:#8b949e">
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:#f85149;border-radius:2px"></div>Payables</div>
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:#3fb950;border-radius:2px"></div>Receivables</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:6px;overflow-x:auto">
+    ${trend.map(t=>`<div style="font-size:9px;color:#484f58;width:31px;text-align:center;flex-shrink:0">${t.month.slice(5)}</div>`).join('')}
+  </div>`;
+}
+
+async function onMonthChange(month) {
+  selMonth = month;
+  document.getElementById('mis-section-title').textContent =
+    `📋 MIS Summary — ${month || 'All Time'}`;
+  const mis = await api('/dashboard/mis' + (month ? '?month='+month : ''));
+  document.getElementById('dash-mis').innerHTML = renderMIS(mis);
+}
+
+async function onVendorChange(vendor) {
+  selVendor = vendor;
+  const panel = document.getElementById('vendor-drill-panel');
+  if(!vendor) {
+    panel.innerHTML = `<div class="card" style="text-align:center;padding:30px">
+      <div style="font-size:28px;margin-bottom:8px">🏭</div>
+      <div style="font-size:13px;color:#8b949e">Select a vendor to see detailed analysis</div>
+    </div>`;
+    return;
+  }
+  panel.innerHTML = spin();
+  const d = await api('/dashboard/vendor-drill?vendor='+encodeURIComponent(vendor));
+  if(!d||!d.vendor_name) { panel.innerHTML=empty('❌','No data for this vendor'); return; }
+  panel.innerHTML = `<div class="drill-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:14px;font-weight:700">${esc(d.vendor_name)}</div>
+        <div style="font-size:11px;color:#484f58;margin-top:2px">Code: ${esc(d.vendor_code||'—')} · ${d.invoice_count} invoices</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:#484f58">Payment Rate</div>
+        <div style="font-size:18px;font-weight:700;color:${d.payment_rate>=80?'#3fb950':d.payment_rate>=50?'#d29922':'#f85149'}">${d.payment_rate}%</div>
+      </div>
+    </div>
+    <div class="drill-kpis">
+      ${[
+        {l:'Total Invoiced',v:`AED ${fmt(d.total_amount)}`,c:'#58a6ff'},
+        {l:'Total Paid',v:`AED ${fmt(d.total_paid)}`,c:'#3fb950'},
+        {l:'Outstanding',v:`AED ${fmt(d.total_outstanding)}`,c:'#d29922'},
+        {l:'Overdue',v:`AED ${fmt(d.overdue_amount)}`,c:'#f85149'},
+        {l:'Upcoming',v:`AED ${fmt(d.upcoming_amount)}`,c:'#bc8cff'},
+      ].map(k=>`<div class="drill-kpi">
+        <div class="drill-kpi-lbl">${k.l}</div>
+        <div class="drill-kpi-val" style="color:${k.c}">${k.v}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#484f58;margin-bottom:6px">Payment Progress</div>
+      <div style="background:#21262d;border-radius:6px;height:10px;overflow:hidden">
+        <div style="height:100%;width:${d.payment_rate}%;background:linear-gradient(90deg,#1f6feb,#3fb950);border-radius:6px;transition:width .6s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#484f58;margin-top:4px">
+        <span>0%</span><span>${d.payment_rate}% paid</span><span>100%</span>
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:#8b949e">Invoice Breakdown</div>
+    ${buildTable([
+      {key:'invoice_no',label:'Invoice No',cls:'mono'},
+      {key:'invoice_date',label:'Date'},
+      {key:'due_date',label:'Due Date'},
+      {key:'amount',label:'Amount',cls:'mono',fn:r=>`AED ${fmt(r.amount)}`},
+      {key:'paid_amount',label:'Paid',cls:'mono',fn:r=>`<span style="color:#3fb950">AED ${fmt(r.paid_amount)}</span>`},
+      {key:'outstanding',label:'Outstanding',cls:'mono',fn:r=>`<span style="color:#d29922">AED ${fmt(r.outstanding)}</span>`},
+      {key:'status',label:'Status',fn:r=>badge(r.status)},
+    ], d.invoices||[], 'No invoices found.')}
+  </div>`;
+}
+
+async function onCustomerChange(customer) {
+  selCustomer = customer;
+  const panel = document.getElementById('customer-drill-panel');
+  if(!customer) {
+    panel.innerHTML = `<div class="card" style="text-align:center;padding:30px">
+      <div style="font-size:28px;margin-bottom:8px">🏢</div>
+      <div style="font-size:13px;color:#8b949e">Select a customer to see detailed analysis</div>
+    </div>`;
+    return;
+  }
+  panel.innerHTML = spin();
+  const d = await api('/dashboard/customer-drill?customer='+encodeURIComponent(customer));
+  if(!d||!d.customer_name) { panel.innerHTML=empty('❌','No data for this customer'); return; }
+  const bcColors={'0-30':'#3fb950','31-60':'#d29922','61-90':'#f85149','90+':'#bc8cff'};
+  panel.innerHTML = `<div class="drill-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:14px;font-weight:700">${esc(d.customer_name)}</div>
+        <div style="font-size:11px;color:#484f58;margin-top:2px">${d.invoice_count} invoices</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:#484f58">Collection Rate</div>
+        <div style="font-size:18px;font-weight:700;color:${d.collection_rate>=80?'#3fb950':d.collection_rate>=50?'#d29922':'#f85149'}">${d.collection_rate}%</div>
+      </div>
+    </div>
+    <div class="drill-kpis">
+      ${[
+        {l:'Total Invoiced',v:`AED ${fmt(d.total_amount)}`,c:'#3fb950'},
+        {l:'Total Collected',v:`AED ${fmt(d.total_received)}`,c:'#58a6ff'},
+        {l:'Outstanding',v:`AED ${fmt(d.total_outstanding)}`,c:'#d29922'},
+      ].map(k=>`<div class="drill-kpi">
+        <div class="drill-kpi-lbl">${k.l}</div>
+        <div class="drill-kpi-val" style="color:${k.c}">${k.v}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#484f58;margin-bottom:8px">Ageing Distribution</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${(d.ageing_buckets||[]).map(b=>`<div style="flex:1;min-width:100px;background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:10px;text-align:center">
+          <div style="font-size:13px;font-weight:700;color:${bcColors[b.bucket]||'#58a6ff'};font-family:'Courier New'">AED ${fmt(b.amount)}</div>
+          <div style="font-size:10px;color:#484f58;margin-top:3px">${b.bucket} days</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:#8b949e">Invoice Breakdown</div>
+    ${buildTable([
+      {key:'invoice_no',label:'Invoice No',cls:'mono'},
+      {key:'invoice_date',label:'Date'},
+      {key:'amount',label:'Amount',cls:'mono',fn:r=>`AED ${fmt(r.amount)}`},
+      {key:'received_amount',label:'Received',cls:'mono',fn:r=>`<span style="color:#58a6ff">AED ${fmt(r.received_amount)}</span>`},
+      {key:'outstanding',label:'Outstanding',cls:'mono',fn:r=>`<span style="color:#d29922">AED ${fmt(r.outstanding)}</span>`},
+      {key:'bucket',label:'Age',fn:r=>badge(r.bucket)},
+    ], d.invoices||[], 'No invoices found.')}
+  </div>`;
+}
+
+function resetFilters() {
+  selVendor=''; selCustomer=''; selMonth='';
+  const vSel=document.getElementById('dash-vendor');
+  const cSel=document.getElementById('dash-customer');
+  const mSel=document.getElementById('dash-month');
+  if(vSel) vSel.value='';
+  if(cSel) cSel.value='';
+  if(mSel) mSel.value='';
+  onMonthChange('');
+  onVendorChange('');
+  onCustomerChange('');
+}
+
+// ── AP ────────────────────────────────────────────────────────────
+let apVendors=[], apAllPayDue=[], apAllVendors=[];
+
+async function loadAP() {
+  const el=document.getElementById('page-ap');
+  el.innerHTML=spin();
+  const [s,p,v,vlist]=await Promise.all([
+    api('/ap/summary'),api('/ap/payment-due'),api('/ap/vendors'),api('/dashboard/vendors')
+  ]);
+  apAllPayDue=p||[]; apAllVendors=v||[]; apVendors=vlist||[];
+  renderAP(s,p,v);
+}
+
+function renderAP(s,p,v) {
+  const el=document.getElementById('page-ap');
+  el.innerHTML=`
+    <div class="section-header">
+      <div><div class="section-title">Accounts Payable</div><div class="section-sub">Vendor ledger, payment schedules &amp; statements</div></div>
+      <button class="btn btn-outline btn-sm" onclick="dl('/reports/ap-outstanding','ap_outstanding.xlsx')">⬇ Export All</button>
+    </div>
+
+    <!-- Dynamic KPI filter bar -->
+    <div class="page-filter">
+      <span class="pf-label">🔍 Filter KPIs by</span>
+      <select class="pf-select" id="ap-kpi-vendor" onchange="refreshAPKpis()">
+        <option value="">All Vendors</option>
+        ${apVendors.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}
+      </select>
+      <select class="pf-select" id="ap-kpi-month" onchange="refreshAPKpis()">
+        <option value="">All Months</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="resetAPFilters()">↺ Reset</button>
+    </div>
+
+    <!-- Dynamic KPI cards -->
+    <div class="kpi-grid mb-3" id="ap-kpi-grid">
+      ${s?[
+        {l:'Total Outstanding',v:`AED ${fmt(s.total_outstanding)}`,c:'#58a6ff'},
+        {l:'Total Vendors',v:s.total_vendors,c:'#3fb950'},
+        {l:'Total Invoices',v:s.total_invoices,c:'#bc8cff'},
+        {l:'Due This Month',v:`AED ${fmt(s.due_this_month)}`,c:'#d29922'},
+        {l:'Overdue Amount',v:`AED ${fmt(s.overdue_amount)}`,c:'#f85149'},
+      ].map(k=>`<div class="kpi-card" style="--c:${k.c}"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="font-size:16px">${k.v}</div></div>`).join(''):''}
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'ap-vendors','ap-due','ap')">Vendor Summary</div>
+      <div class="tab" onclick="switchTab(this,'ap-due','ap-vendors','ap')">Payment Due</div>
+    </div>
+
+    <!-- Vendor Summary tab -->
+    <div id="ap-vendors">
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <span class="tbl-title">Vendor Summary</span>
+          <input class="search-box" placeholder="Search vendor…" oninput="filterAPVendorTable(this.value)">
+        </div>
+        <table id="ap-vendor-table">
+          <thead><tr>
+            <th>⬇ Statement</th><th>✉ Mail</th>
+            <th>Vendor</th><th>Code</th><th>Invoices</th>
+            <th>Total Amount</th><th>Outstanding</th>
+          </tr></thead>
+          <tbody id="ap-vendor-tbody">
+            ${(v||[]).map(r=>`<tr data-vendor="${esc(r.vendor_name)}">
+              <td><button class="btn-dl" onclick="dlPartyStatement('ap','${esc(r.vendor_name)}')">⬇ Statement</button></td>
+              <td><button class="btn-mail" onclick="openMailModal('${esc(r.vendor_name)}','vendor','AP')">✉ Send Mail</button></td>
+              <td><strong style="color:#e6edf3">${esc(r.vendor_name)}</strong></td>
+              <td class="mono">${esc(r.vendor_code||'—')}</td>
+              <td>${r.invoice_count}</td>
+              <td class="mono">AED ${fmt(r.total_amount)}</td>
+              <td class="mono" style="color:#d29922">${fmt(r.total_outstanding)}</td>
+            </tr>`).join('')}
+            ${!v||!v.length?`<tr><td colspan="7">${empty('📋','No vendor data. Upload a vendor ledger.')}</td></tr>`:''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Payment Due tab -->
+    <div id="ap-due" style="display:none">
+      <div class="page-filter">
+        <span class="pf-label">Filter by Vendor</span>
+        <select class="pf-select" id="ap-due-vendor" onchange="filterAPDueTable(this.value)">
+          <option value="">All Vendors</option>
+          ${apVendors.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="dl('/reports/payment-due','payment_due.xlsx')">⬇ Download All</button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head"><span class="tbl-title">Payment Due Schedule</span></div>
+        <table>
+          <thead><tr>
+            <th>Vendor</th><th>Invoice No</th><th>Invoice Date</th>
+            <th>Due Date</th><th>Outstanding</th><th>Days</th><th>Status</th>
+          </tr></thead>
+          <tbody id="ap-due-tbody">
+            ${(p||[]).map(r=>`<tr data-vendor="${esc(r.vendor_name)}">
+              <td><strong style="color:#e6edf3">${esc(r.vendor_name)}</strong></td>
+              <td class="mono">${esc(r.invoice_no)}</td>
+              <td>${r.invoice_date||'—'}</td>
+              <td>${r.due_date||'—'}</td>
+              <td class="mono">AED ${fmt(r.outstanding)}</td>
+              <td class="mono" style="color:${r.days_until_due<0?'#f85149':r.days_until_due<8?'#d29922':'#3fb950'}">
+                ${r.days_until_due<0?Math.abs(r.days_until_due)+'d ago':r.days_until_due+'d'}
+              </td>
+              <td>${badge(r.status)}</td>
+            </tr>`).join('')}
+            ${!p||!p.length?`<tr><td colspan="7">${empty('📅','No payment due data.')}</td></tr>`:''}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Populate month dropdown
+  api('/dashboard/months').then(months=>{
+    const sel=document.getElementById('ap-kpi-month');
+    if(sel&&months) months.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  });
+}
+
+function filterAPVendorTable(search) {
+  document.querySelectorAll('#ap-vendor-tbody tr').forEach(tr=>{
+    tr.style.display=!search||tr.dataset.vendor.toLowerCase().includes(search.toLowerCase())?'':'none';
+  });
+}
+
+function filterAPDueTable(vendor) {
+  document.querySelectorAll('#ap-due-tbody tr').forEach(tr=>{
+    tr.style.display=!vendor||tr.dataset.vendor===vendor?'':'none';
+  });
+}
+
+async function refreshAPKpis() {
+  const vendor=document.getElementById('ap-kpi-vendor')?.value||'';
+  const month=document.getElementById('ap-kpi-month')?.value||'';
+  let url='/ap/summary-by-party?';
+  if(vendor) url+=`vendor=${encodeURIComponent(vendor)}&`;
+  if(month) url+=`month=${encodeURIComponent(month)}`;
+  const s=await api(url);
+  if(!s) return;
+  const grid=document.getElementById('ap-kpi-grid');
+  if(!grid) return;
+  grid.innerHTML=[
+    {l:`Outstanding — ${s.vendor}`,v:`AED ${fmt(s.total_outstanding)}`,c:'#58a6ff'},
+    {l:'Invoices',v:s.total_invoices,c:'#bc8cff'},
+    {l:'Due This Month',v:`AED ${fmt(s.due_this_month)}`,c:'#d29922'},
+    {l:'Overdue Amount',v:`AED ${fmt(s.overdue_amount)}`,c:'#f85149'},
+  ].map(k=>`<div class="kpi-card" style="--c:${k.c}"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="font-size:16px">${k.v}</div></div>`).join('');
+}
+
+function resetAPFilters() {
+  const vs=document.getElementById('ap-kpi-vendor');
+  const ms=document.getElementById('ap-kpi-month');
+  if(vs)vs.value=''; if(ms)ms.value='';
+  refreshAPKpis();
+}
+
+// ── AR ────────────────────────────────────────────────────────────
+let arCustomers=[], arAllAgeing=[];
+
+async function loadAR() {
+  const el=document.getElementById('page-ar');
+  el.innerHTML=spin();
+  const [s,ag,bk,fu,clist]=await Promise.all([
+    api('/ar/summary'),api('/ar/ageing'),api('/ar/ageing-buckets'),
+    api('/ar/collection-followup'),api('/dashboard/customers')
+  ]);
+  arCustomers=clist||[]; arAllAgeing=ag||[];
+  renderAR(s,ag,bk,fu);
+}
+
+function renderAR(s,ag,bk,fu) {
+  const el=document.getElementById('page-ar');
+  const bc={'0-30':'#3fb950','31-60':'#d29922','61-90':'#f85149','90+':'#bc8cff'};
+  el.innerHTML=`
+    <div class="section-header">
+      <div><div class="section-title">Accounts Receivable</div><div class="section-sub">Customer ageing, collection &amp; statements</div></div>
+      <button class="btn btn-outline btn-sm" onclick="dl('/reports/ar-ageing','ar_ageing.xlsx')">⬇ Export All</button>
+    </div>
+
+    <!-- Dynamic KPI filter bar -->
+    <div class="page-filter">
+      <span class="pf-label">🔍 Filter KPIs by</span>
+      <select class="pf-select" id="ar-kpi-customer" onchange="refreshARKpis()">
+        <option value="">All Customers</option>
+        ${arCustomers.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+      </select>
+      <select class="pf-select" id="ar-kpi-month" onchange="refreshARKpis()">
+        <option value="">All Months</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="resetARFilters()">↺ Reset</button>
+    </div>
+
+    <!-- Dynamic KPI cards -->
+    <div class="kpi-grid mb-3" id="ar-kpi-grid">
+      ${s?[
+        {l:'Total Outstanding',v:`AED ${fmt(s.total_outstanding)}`,c:'#3fb950'},
+        {l:'Total Customers',v:s.total_customers,c:'#58a6ff'},
+        {l:'Total Invoices',v:s.total_invoices,c:'#bc8cff'},
+        {l:'Overdue Amount',v:`AED ${fmt(s.overdue_amount)}`,c:'#f85149'},
+        {l:'Overdue %',v:`${s.overdue_percentage}%`,c:'#d29922'},
+      ].map(k=>`<div class="kpi-card" style="--c:${k.c}"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="font-size:16px">${k.v}</div></div>`).join(''):''}
+    </div>
+
+    <div class="card-row mb-3">
+      <div class="card">
+        <div class="card-title">Ageing Distribution</div>
+        ${barChart(bk||[],'bucket','amount',Object.values(bc))}
+      </div>
+      <div class="card" style="max-width:240px">
+        <div class="card-title">Bucket Breakdown</div>
+        ${(bk||[]).map(b=>`<div class="age-bar-wrap">
+          <div class="age-bar-top"><span style="color:${bc[b.bucket]||'#58a6ff'};font-weight:600;font-size:12px">${b.bucket} days</span><span class="mono" style="font-size:11px">${b.percentage}%</span></div>
+          <div class="age-bar-bg"><div class="age-bar-fill" style="width:${b.percentage}%;background:${bc[b.bucket]||'#58a6ff'}"></div></div>
+          <div style="font-size:10px;color:#484f58;margin-top:2px">AED ${fmt(b.amount)} · ${b.invoice_count} inv</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'ar-ageing','ar-followup','ar')">Customer Ageing</div>
+      <div class="tab" onclick="switchTab(this,'ar-followup','ar-ageing','ar')">Collection Follow-up</div>
+    </div>
+
+    <!-- Customer Ageing tab -->
+    <div id="ar-ageing">
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <span class="tbl-title">Customer Ageing Report</span>
+          <input class="search-box" placeholder="Search customer…" oninput="filterARTable(this.value)">
+        </div>
+        <table>
+          <thead><tr>
+            <th>⬇ Statement</th><th>✉ Mail</th>
+            <th>Customer</th><th>Total Outstanding</th>
+            <th style="color:#3fb950">0-30 Days</th>
+            <th style="color:#d29922">31-60 Days</th>
+            <th style="color:#f85149">61-90 Days</th>
+            <th style="color:#bc8cff">90+ Days</th>
+          </tr></thead>
+          <tbody id="ar-ageing-tbody">
+            ${(ag||[]).map(r=>`<tr data-customer="${esc(r.customer_name)}">
+              <td><button class="btn-dl" onclick="dlPartyStatement('ar','${esc(r.customer_name)}')">⬇ Statement</button></td>
+              <td><button class="btn-mail" onclick="openMailModal('${esc(r.customer_name)}','customer','AR')">✉ Send Mail</button></td>
+              <td><strong style="color:#e6edf3">${esc(r.customer_name)}</strong></td>
+              <td class="mono" style="color:#d29922">${fmt(r.total_outstanding)}</td>
+              <td class="mono" style="color:#3fb950">${fmt(r.bucket_0_30)}</td>
+              <td class="mono" style="color:#d29922">${fmt(r.bucket_31_60)}</td>
+              <td class="mono" style="color:#f85149">${fmt(r.bucket_61_90)}</td>
+              <td class="mono" style="color:#bc8cff">${fmt(r.bucket_90_plus)}</td>
+            </tr>`).join('')}
+            ${!ag||!ag.length?`<tr><td colspan="8">${empty('📋','No data. Upload a customer ledger.')}</td></tr>`:''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Collection Follow-up tab -->
+    <div id="ar-followup" style="display:none">
+      <div class="page-filter">
+        <span class="pf-label">Filter by Customer</span>
+        <select class="pf-select" id="ar-followup-customer" onchange="filterARFollowup(this.value)">
+          <option value="">All Customers</option>
+          ${arCustomers.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="dl('/reports/collection-followup','collection_followup.xlsx')">⬇ Download All</button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head"><span class="tbl-title">Collection Follow-up List</span></div>
+        <table>
+          <thead><tr>
+            <th>Customer</th><th>Invoice No</th><th>Invoice Date</th>
+            <th>Days Outstanding</th><th>Outstanding</th><th>Bucket</th>
+          </tr></thead>
+          <tbody id="ar-followup-tbody">
+            ${(fu||[]).map(r=>`<tr data-customer="${esc(r.customer_name)}">
+              <td><strong style="color:#e6edf3">${esc(r.customer_name)}</strong></td>
+              <td class="mono">${esc(r.invoice_no)}</td>
+              <td>${r.invoice_date||'—'}</td>
+              <td class="mono" style="color:#f85149">${r.days_outstanding}d</td>
+              <td class="mono">AED ${fmt(r.outstanding)}</td>
+              <td>${badge(r.bucket)}</td>
+            </tr>`).join('')}
+            ${!fu||!fu.length?`<tr><td colspan="6">${empty('📞','No invoices requiring follow-up.')}</td></tr>`:''}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  api('/dashboard/months').then(months=>{
+    const sel=document.getElementById('ar-kpi-month');
+    if(sel&&months) months.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  });
+}
+
+function filterARTable(search) {
+  document.querySelectorAll('#ar-ageing-tbody tr').forEach(tr=>{
+    tr.style.display=!search||tr.dataset.customer.toLowerCase().includes(search.toLowerCase())?'':'none';
+  });
+}
+
+function filterARFollowup(customer) {
+  document.querySelectorAll('#ar-followup-tbody tr').forEach(tr=>{
+    tr.style.display=!customer||tr.dataset.customer===customer?'':'none';
+  });
+}
+
+async function refreshARKpis() {
+  const customer=document.getElementById('ar-kpi-customer')?.value||'';
+  const month=document.getElementById('ar-kpi-month')?.value||'';
+  let url='/ar/summary-by-party?';
+  if(customer) url+=`customer=${encodeURIComponent(customer)}&`;
+  if(month) url+=`month=${encodeURIComponent(month)}`;
+  const s=await api(url);
+  if(!s) return;
+  const grid=document.getElementById('ar-kpi-grid');
+  if(!grid) return;
+  grid.innerHTML=[
+    {l:`Outstanding — ${s.customer}`,v:`AED ${fmt(s.total_outstanding)}`,c:'#3fb950'},
+    {l:'Invoices',v:s.total_invoices,c:'#bc8cff'},
+    {l:'Overdue Amount',v:`AED ${fmt(s.overdue_amount)}`,c:'#f85149'},
+    {l:'Overdue %',v:`${s.overdue_percentage}%`,c:'#d29922'},
+  ].map(k=>`<div class="kpi-card" style="--c:${k.c}"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="font-size:16px">${k.v}</div></div>`).join('');
+}
+
+function resetARFilters() {
+  const cs=document.getElementById('ar-kpi-customer');
+  const ms=document.getElementById('ar-kpi-month');
+  if(cs)cs.value=''; if(ms)ms.value='';
+  refreshARKpis();
+}
+
+// ── RECONCILIATION ────────────────────────────────────────────────
+let reconType='ap', reconData=null, reconParties=[];
+
+async function loadReconciliation() {
+  const el=document.getElementById('page-reconciliation');
+  const [vendors,customers]=await Promise.all([api('/dashboard/vendors'),api('/dashboard/customers')]);
+  reconParties={vendors:vendors||[],customers:customers||[]};
+  el.innerHTML=buildReconShell();
+}
+
+function buildReconShell() {
+  const parties = reconType==='ap' ? (reconParties.vendors||[]) : (reconParties.customers||[]);
+  return `
+    <div class="section-header">
+      <div><div class="section-title">Reconciliation</div><div class="section-sub">ERP vs SOA matching with party-wise analysis &amp; export</div></div>
+      <div class="flex gap-2">
+        <button class="btn btn-blue btn-sm" id="run-btn" onclick="runRecon()">▶ Run Reconciliation</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab ${reconType==='ap'?'active':''}" onclick="setReconType(this,'ap')">AP Reconciliation</div>
+      <div class="tab ${reconType==='ar'?'active':''}" onclick="setReconType(this,'ar')">AR Reconciliation</div>
+    </div>
+
+    <!-- Party + export filter bar -->
+    <div class="page-filter">
+      <span class="pf-label">Filter by ${reconType==='ap'?'Vendor':'Customer'}</span>
+      <select class="pf-select" id="recon-party-sel" onchange="filterReconByParty(this.value)">
+        <option value="">All Parties</option>
+        ${parties.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+      </select>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="dl('/reports/reconciliation/'+reconType,'recon_'+reconType+'.xlsx')">⬇ Excel (All)</button>
+        <button class="btn-dl" onclick="dlReconByParty()">⬇ Party Statement</button>
+        <button class="btn-mail" onclick="mailReconParty()">✉ Mail Party</button>
+      </div>
+    </div>
+
+    <div id="recon-body">
+      <div class="card" style="text-align:center;padding:50px">
+        <div style="font-size:40px;margin-bottom:12px">⚖️</div>
+        <div style="font-size:13px;color:#8b949e">Click "Run Reconciliation" to match ERP vs SOA records</div>
+        <div style="font-size:11px;color:#484f58;margin-top:6px">Upload both a ledger and SOA file first</div>
+      </div>
+    </div>`;
+}
+
+function setReconType(el,type) {
+  reconType=type; reconData=null;
+  document.getElementById('page-reconciliation').innerHTML=buildReconShell();
+}
+
+async function runRecon() {
+  document.getElementById('recon-body').innerHTML=spin();
+  const data=await api('/reconciliation/run/'+reconType,{method:'POST'});
+  reconData=data;
+  showReconResults(data,'all','');
+}
+
+function filterReconByParty(party) {
+  if(!reconData) return;
+  showReconResults(reconData,'all',party);
+}
+
+function showReconResults(data,filter,party) {
+  if(!data){document.getElementById('recon-body').innerHTML=empty('❌','Reconciliation failed. Check API.');return;}
+  let items=(data.items||[]);
+  if(party) items=items.filter(r=>r.party_name===party);
+  if(filter!=='all') items=items.filter(r=>r.status===filter);
+
+  const partyTotal=items.reduce((s,r)=>s+(r.erp_amount||0),0);
+  const partyOutstanding=items.filter(r=>r.status!=='matched').reduce((s,r)=>s+(r.erp_amount||0),0);
+  const rc=data.match_rate>90?'#3fb950':data.match_rate>70?'#d29922':'#f85149';
+
+  document.getElementById('recon-body').innerHTML=`
+    <div class="recon-stats">
+      <div class="recon-stat"><div class="recon-val">${data.total_records}</div><div class="recon-lbl">Total Records</div></div>
+      <div class="recon-stat"><div class="recon-val" style="color:#3fb950">${data.matched}</div><div class="recon-lbl">Matched</div></div>
+      <div class="recon-stat"><div class="recon-val" style="color:#d29922">${data.discrepancies}</div><div class="recon-lbl">Discrepancies</div></div>
+      <div class="recon-stat"><div class="recon-val" style="color:#f85149">${data.unmatched}</div><div class="recon-lbl">Unmatched</div></div>
+    </div>
+    <div style="background:#0d1117;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <span style="font-size:13px;color:#8b949e">Match Rate: </span>
+        <span style="font-family:'Courier New';font-weight:700;font-size:20px;color:${rc}">${data.match_rate}%</span>
+      </div>
+      ${party?`<div style="font-size:12px;color:#8b949e">
+        Showing: <strong style="color:#e6edf3">${esc(party)}</strong> &nbsp;|&nbsp;
+        Total: <span class="mono">AED ${fmt(partyTotal)}</span> &nbsp;|&nbsp;
+        Outstanding: <span class="mono" style="color:#d29922">AED ${fmt(partyOutstanding)}</span>
+      </div>`:''}
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-head">
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          ${['all','matched','unmatched','discrepancy'].map(f=>`<button class="btn btn-sm ${filter===f?'btn-blue':'btn-outline'}" onclick="showReconResults(reconData,'${f}',document.getElementById('recon-party-sel')?.value||'')">${f}</button>`).join('')}
+        </div>
+        <span style="font-size:11px;color:#484f58">${items.length} records shown</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Party</th><th>Invoice No</th>
+          <th>ERP Amount</th><th>SOA Amount</th>
+          <th>Difference</th><th>Fine / Adj.</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          ${items.map(r=>`<tr>
+            <td><strong style="color:#e6edf3">${esc(r.party_name)}</strong></td>
+            <td class="mono">${esc(r.invoice_no)}</td>
+            <td class="mono">${r.erp_amount!=null?`AED ${fmt(r.erp_amount)}`:'—'}</td>
+            <td class="mono">${r.soa_amount!=null?`AED ${fmt(r.soa_amount)}`:'—'}</td>
+            <td class="mono" style="color:${r.difference&&r.difference!==0?'#d29922':'#484f58'}">
+              ${r.difference!=null&&r.difference!==0?`AED ${fmt(r.difference)}`:'—'}
+            </td>
+            <td class="mono" style="color:#f85149">
+              ${r.difference&&Math.abs(r.difference)>0?`AED ${fmt(Math.abs(r.difference))}`:'—'}
+            </td>
+            <td>${badge(r.status)}</td>
+          </tr>`).join('')}
+          ${!items.length?`<tr><td colspan="7">${empty('🔍','No records match this filter.')}</td></tr>`:''}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function dlReconByParty() {
+  const party=document.getElementById('recon-party-sel')?.value;
+  if(!party){notify('Select a party first to download their statement','info');return;}
+  const type=reconType==='ap'?'ap':'ar';
+  const param=type==='ap'?'vendor':'customer';
+  dl(`/reports/party-statement/${type}?${param}=${encodeURIComponent(party)}`,
+     `statement_${type}_${party.replace(/ /g,'_')}.xlsx`);
+}
+
+function mailReconParty() {
+  const party=document.getElementById('recon-party-sel')?.value;
+  if(!party){notify('Select a party first','info');return;}
+  const ptype=reconType==='ap'?'vendor':'customer';
+  const dept=reconType==='ap'?'AP':'AR';
+  openMailModal(party, ptype, dept);
+}
+
+// ── REPORTS ───────────────────────────────────────────────────────
+function loadReports() {
+  const rpts=[
+    {n:'AP Outstanding',d:'Vendor-wise outstanding payables',i:'📤',p:'/reports/ap-outstanding',f:'ap_outstanding.xlsx',c:'#58a6ff'},
+    {n:'Payment Due Schedule',d:'Invoices due and overdue',i:'📅',p:'/reports/payment-due',f:'payment_due.xlsx',c:'#d29922'},
+    {n:'AR Ageing Report',d:'Customer ageing across all buckets',i:'📥',p:'/reports/ar-ageing',f:'ar_ageing.xlsx',c:'#3fb950'},
+    {n:'Collection Follow-up',d:'Invoices >30 days requiring action',i:'📞',p:'/reports/collection-followup',f:'collection_followup.xlsx',c:'#f85149'},
+    {n:'AP Reconciliation',d:'ERP vs SOA for payables',i:'⚖️',p:'/reports/reconciliation/ap',f:'recon_ap.xlsx',c:'#bc8cff'},
+    {n:'AR Reconciliation',d:'ERP vs SOA for receivables',i:'⚖️',p:'/reports/reconciliation/ar',f:'recon_ar.xlsx',c:'#06b0d4'},
+  ];
+  document.getElementById('page-reports').innerHTML=`
+    <div class="section-header">
+      <div><div class="section-title">Reports</div><div class="section-sub">Download formatted Excel reports</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px">
+      ${rpts.map(r=>`<div class="kpi-card" style="--c:${r.c}">
+        <div style="font-size:28px;margin-bottom:10px">${r.i}</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:5px">${r.n}</div>
+        <div style="font-size:11px;color:#484f58;margin-bottom:14px;line-height:1.5">${r.d}</div>
+        <button class="btn btn-outline btn-sm" onclick="dl('${r.p}','${r.f}')">⬇ Download Excel</button>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ── UPLOAD ────────────────────────────────────────────────────────
+async function loadUpload() {
+  const el=document.getElementById('page-upload');
+  const hist=await api('/upload/history')||[];
+  el.innerHTML=`
+    <div class="section-header">
+      <div><div class="section-title">Upload Center</div><div class="section-sub">Import ledgers and SOA files</div></div>
+    </div>
+    <div class="upload-grid">
+      ${[
+        {l:'Vendor Ledger',i:'🏭',t:'vendor-ledger',e:'vendor-ledger',h:'Vendor Name, Invoice No, Invoice Date, Amount'},
+        {l:'Customer Ledger',i:'🏢',t:'customer-ledger',e:'customer-ledger',h:'Customer Name, Invoice No, Invoice Date, Amount'},
+        {l:'Statement of Account',i:'📄',t:'soa',e:'soa',h:'Party Name, Invoice No, Amount'},
+      ].map(z=>`<div class="upload-box">
+        <div style="font-size:26px;margin-bottom:6px">${z.i}</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:3px">${z.l}</div>
+        <div class="upload-zone" onclick="document.getElementById('fi-${z.t}').click()"
+          ondragover="event.preventDefault();this.style.borderColor='#58a6ff'"
+          ondragleave="this.style.borderColor='#30363d'"
+          ondrop="dropFile(event,'${z.t}','${z.e}')">
+          <div class="upload-icon">📎</div>
+          <div class="upload-label">Drop file or click to browse</div>
+          <div class="upload-sub">${z.h}</div>
+        </div>
+        <input type="file" id="fi-${z.t}" accept=".xlsx,.xls,.csv" onchange="doUpload(this,'${z.t}','${z.e}')">
+        <div id="st-${z.t}" style="font-size:11px;color:#484f58;margin-top:6px;min-height:16px"></div>
+      </div>`).join('')}
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-head"><span class="tbl-title">Upload History</span></div>
+      ${buildTable([
+        {key:'filename',label:'File',fn:r=>`<span style="color:#e6edf3;font-weight:500">${esc(r.filename)}</span>`},
+        {key:'document_type',label:'Type',fn:r=>r.document_type.replace(/_/g,' ')},
+        {key:'row_count',label:'Rows'},
+        {key:'uploaded_at',label:'Uploaded',fn:r=>new Date(r.uploaded_at).toLocaleString()},
+        {key:'status',label:'Status',fn:r=>badge(r.status)},
+      ],hist,'No uploads yet.')}
+    </div>`;
+}
+
+function dropFile(e,t,ep) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor='#30363d';
+  const f=e.dataTransfer.files[0];
+  if(f) uploadFile(f,t,ep);
+}
+
+function doUpload(input,t,ep) {
+  if(input.files[0]) uploadFile(input.files[0],t,ep);
+}
+
+async function uploadFile(file,t,ep) {
+  const st=document.getElementById('st-'+t);
+  if(st) st.innerHTML=`<div class="loading" style="padding:4px 0"><div class="spinner"></div>Uploading…</div>`;
+  const fd=new FormData();
+  fd.append('file',file);
+  let url=`${API}/upload/${ep}`;
+  if(ep==='soa'){
+    const pt=prompt('Is this SOA for "vendor" or "customer"?','vendor');
+    if(!pt){ if(st) st.textContent=''; return; }
+    url+=`?party_type=${pt.trim().toLowerCase()}`;
+  }
+  try {
+    const r=await fetch(url,{method:'POST',body:fd});
+    // Read raw text first so we can debug if JSON parse fails
+    const raw=await r.text();
+    let data={};
+    try { data=JSON.parse(raw); } catch(_){ data={}; }
+
+    if(!r.ok){
+      const errMsg=data.detail||raw||`HTTP ${r.status}`;
+      if(st) st.textContent=`❌ ${errMsg}`;
+      notify(`Upload error: ${errMsg}`,'error');
+      return;
+    }
+
+    const rows=data.rows_imported??data.row_count??'?';
+    if(st) st.textContent=`✅ ${rows} rows imported successfully`;
+    notify(`✅ ${file.name} — ${rows} rows imported`,'success');
+    setTimeout(()=>loadUpload(),800);
+  } catch(e) {
+    if(st) st.textContent=`❌ Network error: ${e.message}`;
+    notify('Upload failed — check backend is running on port 8000','error');
+  }
+}
+
+// ── AI CHAT ───────────────────────────────────────────────────────
+const SUGGESTIONS=['Total payable this month','Top overdue customers','AR ageing breakdown','Finance summary','Upcoming payments due','Vendor summary'];
+let chatLog=[{role:'ai',text:"Hello! I'm your Finance AI assistant. Ask me anything about your AP/AR data."}];
+
+function loadAI() {
+  document.getElementById('page-ai').innerHTML=`
+    <div class="section-header mb-3">
+      <div><div class="section-title">AI Finance Assistant</div><div class="section-sub">Natural language queries on your financial data</div></div>
+    </div>
+    <div class="chat-wrap">
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <div class="chat-chips">${SUGGESTIONS.map(s=>`<div class="chip" onclick="sendChat('${s}')">${s}</div>`).join('')}</div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-in" placeholder="Ask about payables, receivables, ageing…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn btn-primary" onclick="sendChat()">Send</button>
+      </div>
+    </div>`;
+  renderChat();
+}
+
+function renderChat() {
+  const el=document.getElementById('chat-msgs');
+  if(!el)return;
+  el.innerHTML=chatLog.map(m=>`<div class="bubble ${m.role}">${esc(m.text)}</div>`).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+async function sendChat(q) {
+  const input=document.getElementById('chat-in');
+  const query=q||(input?.value?.trim());
+  if(!query)return;
+  if(input)input.value='';
+  chatLog.push({role:'user',text:query});
+  chatLog.push({role:'ai',text:'⏳ Analyzing your data…'});
+  renderChat();
+  const data=await api('/ai/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query})});
+  chatLog.pop();
+  chatLog.push({role:'ai',text:data?.answer||'Sorry, I could not process that. Make sure data is uploaded and the backend is running.'});
+  renderChat();
+}
+
+// ── TABS HELPER ───────────────────────────────────────────────────
+function switchTab(el, show, hide, pageId) {
+  const container = pageId
+    ? document.getElementById('page-'+pageId)
+    : el.closest('.page') || el.parentElement;
+  container.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(show).style.display='block';
+  document.getElementById(hide).style.display='none';
+}
+
+
+// ── MAIL MODAL & STATEMENT HELPERS ───────────────────────────────
+function dlPartyStatement(type, party) {
+  const param = type==='ap' ? 'vendor' : 'customer';
+  dl(`/reports/party-statement/${type}?${param}=${encodeURIComponent(party)}`,
+     `statement_${type}_${party.replace(/ /g,'_')}.xlsx`);
+}
+
+async function openMailModal(party, partyType, dept) {
+  // First preview the email
+  const preview = await api(`/mail/preview?party_name=${encodeURIComponent(party)}&party_type=${partyType}`);
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'mail-modal';
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-title">✉ Send Mail to ${esc(party)}</div>
+      <div class="modal-sub">
+        <span class="modal-badge">📋 ${partyType.toUpperCase()}</span>
+        <span class="modal-badge" style="margin-left:4px">CC: ${dept} Department</span>
+        <span class="modal-badge" style="margin-left:4px">${preview?.invoice_count||0} invoices</span>
+      </div>
+
+      <label class="modal-label">Subject</label>
+      <input class="modal-input" id="mail-subject" value="${esc(preview?.subject||'')}">
+
+      <label class="modal-label">Custom Message (prepended to statement)</label>
+      <input class="modal-input" id="mail-custom" placeholder="Optional note to the party…">
+
+      <label class="modal-label">Email Preview (auto-generated from invoice data)</label>
+      <div class="email-preview" id="mail-preview-body">${esc(preview?.body||'Loading…')}</div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="document.getElementById('mail-modal').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="sendMail('${esc(party)}','${partyType}','${dept}')">📨 Send Mail</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  // Close on overlay click
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+}
+
+async function sendMail(party, partyType, dept) {
+  const subject = document.getElementById('mail-subject')?.value||'';
+  const custom = document.getElementById('mail-custom')?.value||'';
+
+  const res = await api('/mail/send', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      party_name: party,
+      party_type: partyType,
+      cc_department: dept,
+      subject,
+      custom_message: custom
+    })
+  });
+
+  document.getElementById('mail-modal')?.remove();
+
+  if(res && res.status==='simulated') {
+    notify(`✅ Mail prepared for ${party} (${res.invoice_count} invoices). ${res.message}`, 'success');
+  } else {
+    notify('Mail sending failed. Check backend.', 'error');
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+// Never cache data pages — always reload fresh from API
+const staticPages = new Set(['reports']); // only static pages are cached
+function loadPage(id) {
+  if(staticPages.has(id) && document.getElementById('page-'+id).innerHTML.trim()!='') return;
+  ({dashboard:loadDashboard,ap:loadAP,ar:loadAR,reconciliation:loadReconciliation,
+    reports:loadReports,upload:loadUpload,ai:loadAI})[id]?.();
+}
+
+buildNav();
+loadPage('dashboard');
+</script>
+</body>
+</html>
