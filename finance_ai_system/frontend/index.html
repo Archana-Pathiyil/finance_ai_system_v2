@@ -243,7 +243,7 @@ input[type=file]{display:none}
 <div id="notif-area"></div>
 
 <script>
-const API = 'http://localhost:8000/api';
+const API = '/api';
 const fmt = n => n==null?'—':Number(n).toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtK = n => Number(n)>=1000?(Number(n)/1000).toFixed(1)+'K':Number(n).toFixed(0);
 const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
