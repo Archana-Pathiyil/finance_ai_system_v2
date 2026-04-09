@@ -24,11 +24,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Create and Start virtual environment and Install dependencies
+      - name: Install dependencies into antenv
         run: |
           cd finance_ai_system/backend
           python -m venv antenv
           source antenv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Upload artifact for deployment jobs
