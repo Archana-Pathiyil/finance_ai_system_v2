@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: finance-intelligence-platform
+    runtime: python
+    rootDir: finance_ai_system/backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    plan: free
