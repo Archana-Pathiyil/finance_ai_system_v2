@@ -8,6 +8,7 @@ from services.ingestion_service import (
     process_vendor_ledger, process_customer_ledger, process_soa, get_upload_history
 )
 from utils.file_parser import validate_extension, parse_vendor_ledger, parse_customer_ledger, parse_soa, get_preview
+from models.models import UploadHistory, VendorLedger, CustomerLedger, SOARecord, ReconciliationResult
 
 router = APIRouter()
 
@@ -82,3 +83,39 @@ def upload_history(db: Session = Depends(get_db)):
         }
         for r in records
     ]
+
+
+@router.delete("/{upload_id}")
+def delete_upload(upload_id: int, db: Session = Depends(get_db)):
+    """Delete a single upload and all its associated data."""
+    record = db.query(UploadHistory).filter(UploadHistory.id == upload_id).first()
+    if not record:
+        raise HTTPException(404, "Upload record not found")
+
+    doc_type = record.document_type
+
+    # Delete associated data based on document type
+    if doc_type == "vendor_ledger":
+        db.query(VendorLedger).filter(VendorLedger.upload_id == upload_id).delete()
+    elif doc_type == "customer_ledger":
+        db.query(CustomerLedger).filter(CustomerLedger.upload_id == upload_id).delete()
+    elif doc_type == "soa":
+        db.query(SOARecord).filter(SOARecord.upload_id == upload_id).delete()
+
+    # Delete the upload record itself
+    db.delete(record)
+    db.commit()
+
+    return {"message": f"Upload {upload_id} and all associated data deleted successfully"}
+
+
+@router.delete("/reset-all")
+def reset_all_data(db: Session = Depends(get_db)):
+    """Delete ALL data from all tables."""
+    db.query(ReconciliationResult).delete()
+    db.query(SOARecord).delete()
+    db.query(VendorLedger).delete()
+    db.query(CustomerLedger).delete()
+    db.query(UploadHistory).delete()
+    db.commit()
+    return {"message": "All data reset successfully"}

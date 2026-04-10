@@ -237,13 +237,15 @@ input[type=file]{display:none}
     <div id="page-reports" class="page"></div>
     <div id="page-upload" class="page"></div>
     <div id="page-ai" class="page"></div>
+    <div id="page-bank" class="page"></div>
+    <div id="page-ml" class="page"></div>
   </div>
 </div>
 
 <div id="notif-area"></div>
 
 <script>
-const API = '/api';
+const API = 'http://localhost:8000/api';
 const fmt = n => n==null?'—':Number(n).toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtK = n => Number(n)>=1000?(Number(n)/1000).toFixed(1)+'K':Number(n).toFixed(0);
 const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -324,9 +326,11 @@ const NAV = [
   {id:'reports',label:'Reports',icon:'📊',sec:'Analytics'},
   {id:'upload',label:'Upload Center',icon:'⬆',sec:'Data'},
   {id:'ai',label:'AI Assistant',icon:'🤖',sec:'Data'},
+  {id:'ml',label:'AI Intelligence',icon:'🧠',sec:'Main'},
+  {id:'bank',label:'Bank Statement',icon:'🏦',sec:'Finance'},
 ];
 const TITLES = {dashboard:'Finance Dashboard',ap:'Accounts Payable',ar:'Accounts Receivable',
-  reconciliation:'Reconciliation',reports:'Reports',upload:'Upload Center',ai:'AI Assistant'};
+  reconciliation:'Reconciliation',reports:'Reports',upload:'Upload Center',ai:'AI Assistant',bank:'Bank Statement & ERP Posting',ml:'AI Intelligence Layer'};
 
 function buildNav() {
   const secs=[...new Set(NAV.map(n=>n.sec))];
@@ -1264,14 +1268,23 @@ async function loadUpload() {
       </div>`).join('')}
     </div>
     <div class="tbl-wrap">
-      <div class="tbl-head"><span class="tbl-title">Upload History</span></div>
-      ${buildTable([
-        {key:'filename',label:'File',fn:r=>`<span style="color:#e6edf3;font-weight:500">${esc(r.filename)}</span>`},
-        {key:'document_type',label:'Type',fn:r=>r.document_type.replace(/_/g,' ')},
-        {key:'row_count',label:'Rows'},
-        {key:'uploaded_at',label:'Uploaded',fn:r=>new Date(r.uploaded_at).toLocaleString()},
-        {key:'status',label:'Status',fn:r=>badge(r.status)},
-      ],hist,'No uploads yet.')}
+      <div class="tbl-head">
+        <span class="tbl-title">Upload History</span>
+        <button class="btn btn-outline btn-sm" onclick="resetAllData()" style="color:#DC2626;border-color:#DC2626">🗑 Reset All Data</button>
+      </div>
+      ${hist.length===0 ? empty('📋','No uploads yet.') : `<table><thead><tr>
+        <th>File</th><th>Type</th><th>Rows</th><th>Uploaded</th><th>Status</th><th>Action</th>
+      </tr></thead><tbody>
+        ${hist.map(r=>`<tr>
+          <td><span style="font-weight:500">${esc(r.filename)}</span></td>
+          <td>${r.document_type.replace(/_/g,' ')}</td>
+          <td>${r.row_count??'—'}</td>
+          <td style="font-size:11px">${new Date(r.uploaded_at).toLocaleString()}</td>
+          <td>${badge(r.status)}</td>
+          <td><button class="btn btn-sm" onclick="deleteUpload(${r.id},'${esc(r.filename)}')"
+            style="background:#FEF2F2;border:1px solid #FECACA;color:#DC2626;font-size:11px">🗑 Delete</button></td>
+        </tr>`).join('')}
+      </tbody></table>`}
     </div>`;
 }
 
@@ -1318,6 +1331,28 @@ async function uploadFile(file,t,ep) {
   } catch(e) {
     if(st) st.textContent=`❌ Network error: ${e.message}`;
     notify('Upload failed — check backend is running on port 8000','error');
+  }
+}
+
+async function deleteUpload(id, filename) {
+  if(!confirm(`Delete "${filename}" and all its data?\n\nThis cannot be undone.`)) return;
+  const r = await fetch(`${API}/upload/${id}`, { method:'DELETE' });
+  if(r.ok) {
+    notify(`✅ "${filename}" deleted successfully`, 'success');
+    loadUpload();
+  } else {
+    notify('❌ Delete failed — check backend', 'error');
+  }
+}
+
+async function resetAllData() {
+  if(!confirm('Reset ALL data?\n\nThis will delete every upload, ledger, SOA and reconciliation record.\n\nThis cannot be undone.')) return;
+  const r = await fetch(`${API}/upload/reset-all`, { method:'DELETE' });
+  if(r.ok) {
+    notify('✅ All data reset successfully', 'success');
+    loadUpload();
+  } else {
+    notify('❌ Reset failed — check backend', 'error');
   }
 }
 
@@ -1441,13 +1476,516 @@ async function sendMail(party, partyType, dept) {
   }
 }
 
+
+// ── BANK STATEMENT MODULE ─────────────────────────────────────────
+let bankTransactions = [];
+let bankPosted = new Set();
+
+async function loadBank() {
+  const el = document.getElementById('page-bank');
+  el.innerHTML = `
+  <div class="section-header">
+    <div>
+      <div class="section-title">🏦 Bank Statement & ERP Posting</div>
+      <div class="section-sub">Upload bank statement PDF · Review transactions · Post to ERP</div>
+    </div>
+  </div>
+
+  <!-- Automation notice -->
+  <div class="alert-box alert-blue" style="background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px">
+    <span style="font-size:18px">⚙️</span>
+    <div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">Automation Ready — Pending Bank API Access</div>
+      <div style="font-size:12px;opacity:.85">In production, this module connects to the bank portal at <strong>9:00 AM daily</strong>, automatically downloads the statement, extracts all transactions, and posts receipts & payments to the ERP. Currently operating in <strong>manual upload mode</strong> — upload your bank statement PDF below to simulate the workflow.</div>
+    </div>
+  </div>
+
+  <!-- Upload zone -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">📄 Upload Bank Statement (PDF or Excel)</div>
+    <div class="upload-zone" id="bank-upload-zone" onclick="document.getElementById('bank-file-input').click()"
+         ondragover="event.preventDefault();this.style.borderColor='#457B9D'"
+         ondragleave="this.style.borderColor=''"
+         ondrop="bankDropFile(event)">
+      <div class="upload-icon">🏦</div>
+      <div class="upload-label">Click to upload or drag & drop</div>
+      <div class="upload-sub">PDF bank statement or Excel (.xlsx) · Max 10MB</div>
+      <input type="file" id="bank-file-input" accept=".pdf,.xlsx,.xls,.csv" onchange="bankProcessFile(this.files[0])">
+    </div>
+    <div id="bank-upload-status" style="font-size:12px;color:#64748B;margin-top:8px;text-align:center"></div>
+  </div>
+
+  <!-- Summary KPIs -->
+  <div id="bank-kpis" style="display:none">
+    <div class="kpi-grid" id="bank-kpi-grid"></div>
+  </div>
+
+  <!-- Transactions table -->
+  <div id="bank-transactions-wrap" style="display:none">
+    <div class="tbl-wrap">
+      <div class="tbl-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div class="tbl-title">📋 Extracted Transactions</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="bank-type-filter" class="pf-select" onchange="renderBankTable()">
+            <option value="">All Types</option>
+            <option value="Receipt">Receipts</option>
+            <option value="Payment">Payments</option>
+          </select>
+          <select id="bank-status-filter" class="pf-select" onchange="renderBankTable()">
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Posted">Posted</option>
+          </select>
+          <button class="btn btn-blue btn-sm" onclick="bankPostSelected()">📤 Post Selected to ERP</button>
+          <button class="btn btn-primary btn-sm" onclick="bankPostAll()">✅ Post All Pending</button>
+          <button class="btn btn-outline btn-sm" onclick="bankDownloadJournal()">⬇ Download Journal</button>
+        </div>
+      </div>
+      <div id="bank-table-body"></div>
+    </div>
+  </div>
+
+  <!-- ERP posting log -->
+  <div id="bank-posting-log" style="display:none">
+    <div class="tbl-wrap" style="margin-top:16px">
+      <div class="tbl-head"><div class="tbl-title">📒 ERP Posting Log</div></div>
+      <div id="bank-log-body"></div>
+    </div>
+  </div>
+  `;
+}
+
+function bankDropFile(e) {
+  e.preventDefault();
+  document.getElementById('bank-upload-zone').style.borderColor = '';
+  const f = e.dataTransfer?.files?.[0];
+  if(f) bankProcessFile(f);
+}
+
+async function bankProcessFile(file) {
+  if(!file) return;
+  const st = document.getElementById('bank-upload-status');
+  st.innerHTML = '<div class="loading" style="padding:8px 0"><div class="spinner"></div>Processing statement…</div>';
+
+  // Simulate processing — in production this calls the backend PDF parser
+  await new Promise(r => setTimeout(r, 1200));
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if(ext === 'pdf') {
+    // Generate realistic dummy transactions from PDF name
+    bankTransactions = generateDummyBankTransactions(file.name);
+  } else {
+    // For Excel/CSV — generate dummy data
+    bankTransactions = generateDummyBankTransactions(file.name);
+  }
+
+  bankPosted = new Set();
+  st.innerHTML = `<span style="color:#16A34A;font-weight:600">✅ ${file.name} processed — ${bankTransactions.length} transactions extracted</span>`;
+
+  renderBankKPIs();
+  renderBankTable();
+  renderBankLog();
+
+  document.getElementById('bank-kpis').style.display = 'block';
+  document.getElementById('bank-transactions-wrap').style.display = 'block';
+  notify(`${file.name} processed — ${bankTransactions.length} transactions found`, 'success');
+}
+
+function generateDummyBankTransactions(filename) {
+  const today = new Date();
+  const txns = [
+    { id:'TXN001', date:'2025-03-31', description:'Customer Receipt — Majid Al Futtaim Retail', ref:'SI-MF-003', type:'Receipt', amount:46000.00, account:'1001 - Bank Account', erp_account:'1200 - Accounts Receivable', status:'Pending', narration:'Collection against invoice SI-MF-003' },
+    { id:'TXN002', date:'2025-03-31', description:'Customer Receipt — Lulu Hypermarket LLC', ref:'SI-LH-003', type:'Receipt', amount:41500.00, account:'1001 - Bank Account', erp_account:'1200 - Accounts Receivable', status:'Pending', narration:'Collection against invoice SI-LH-003' },
+    { id:'TXN003', date:'2025-03-30', description:'Vendor Payment — Emirates Steel Industries', ref:'INV-ES-003', type:'Payment', amount:27000.00, account:'1001 - Bank Account', erp_account:'2100 - Accounts Payable', status:'Pending', narration:'Part payment for invoice INV-ES-003' },
+    { id:'TXN004', date:'2025-03-30', description:'Vendor Payment — Dubai Contracting Co', ref:'INV-DC-002', type:'Payment', amount:26000.00, account:'1001 - Bank Account', erp_account:'2100 - Accounts Payable', status:'Pending', narration:'Part payment for invoice INV-DC-002' },
+    { id:'TXN005', date:'2025-03-29', description:'Customer Receipt — Carrefour UAE', ref:'SI-CF-001', type:'Receipt', amount:95000.00, account:'1001 - Bank Account', erp_account:'1200 - Accounts Receivable', status:'Pending', narration:'Full payment for invoice SI-CF-001' },
+    { id:'TXN006', date:'2025-03-29', description:'Vendor Payment — Al Futtaim Trading LLC', ref:'INV-AF-004', type:'Payment', amount:28750.00, account:'1001 - Bank Account', erp_account:'2100 - Accounts Payable', status:'Pending', narration:'Full payment for invoice INV-AF-004' },
+    { id:'TXN007', date:'2025-03-28', description:'Bank Charges — Monthly Service Fee', ref:'BC-MAR-2025', type:'Payment', amount:350.00, account:'1001 - Bank Account', erp_account:'6100 - Bank Charges', status:'Pending', narration:'Monthly bank service charges' },
+    { id:'TXN008', date:'2025-03-28', description:'Interest Income', ref:'INT-MAR-2025', type:'Receipt', amount:1250.00, account:'1001 - Bank Account', erp_account:'4200 - Interest Income', status:'Pending', narration:'Monthly interest earned on account balance' },
+    { id:'TXN009', date:'2025-03-27', description:'Customer Receipt — Majid Al Futtaim Retail', ref:'SI-MF-004', type:'Receipt', amount:38000.00, account:'1001 - Bank Account', erp_account:'1200 - Accounts Receivable', status:'Pending', narration:'Full payment for invoice SI-MF-004' },
+    { id:'TXN010', date:'2025-03-27', description:'Vendor Payment — Emirates Steel Industries', ref:'INV-ES-004', type:'Payment', amount:48000.00, account:'1001 - Bank Account', erp_account:'2100 - Accounts Payable', status:'Pending', narration:'Part payment for invoice INV-ES-004' },
+    { id:'TXN011', date:'2025-03-26', description:'Salary Transfer — Finance Team', ref:'SAL-MAR-2025', type:'Payment', amount:85000.00, account:'1001 - Bank Account', erp_account:'5100 - Salaries & Wages', status:'Pending', narration:'Monthly salary transfer for finance team' },
+    { id:'TXN012', date:'2025-03-26', description:'Customer Receipt — Lulu Hypermarket LLC', ref:'SI-LH-004', type:'Receipt', amount:49000.00, account:'1001 - Bank Account', erp_account:'1200 - Accounts Receivable', status:'Pending', narration:'Full payment for invoice SI-LH-004' },
+  ];
+  return txns;
+}
+
+function renderBankKPIs() {
+  const receipts = bankTransactions.filter(t => t.type === 'Receipt');
+  const payments = bankTransactions.filter(t => t.type === 'Payment');
+  const totalReceipts = receipts.reduce((s,t) => s + t.amount, 0);
+  const totalPayments = payments.reduce((s,t) => s + t.amount, 0);
+  const net = totalReceipts - totalPayments;
+  const pending = bankTransactions.filter(t => !bankPosted.has(t.id)).length;
+
+  document.getElementById('bank-kpi-grid').innerHTML = `
+    <div class="kpi-card" style="--c:#16A34A">
+      <div class="kpi-label">Total Receipts</div>
+      <div class="kpi-value" style="color:#16A34A">AED ${fmt(totalReceipts)}</div>
+      <div class="kpi-icon">📥</div>
+      <div style="font-size:10px;color:#64748B;margin-top:4px">${receipts.length} transactions</div>
+    </div>
+    <div class="kpi-card" style="--c:#DC2626">
+      <div class="kpi-label">Total Payments</div>
+      <div class="kpi-value" style="color:#DC2626">AED ${fmt(totalPayments)}</div>
+      <div class="kpi-icon">📤</div>
+      <div style="font-size:10px;color:#64748B;margin-top:4px">${payments.length} transactions</div>
+    </div>
+    <div class="kpi-card" style="--c:${net>=0?'#16A34A':'#DC2626'}">
+      <div class="kpi-label">Net Movement</div>
+      <div class="kpi-value" style="color:${net>=0?'#16A34A':'#DC2626'}">AED ${fmt(Math.abs(net))}</div>
+      <div class="kpi-icon">${net>=0?'📈':'📉'}</div>
+      <div style="font-size:10px;color:#64748B;margin-top:4px">${net>=0?'Net Inflow':'Net Outflow'}</div>
+    </div>
+    <div class="kpi-card" style="--c:#D97706">
+      <div class="kpi-label">Pending ERP Posting</div>
+      <div class="kpi-value" style="color:#D97706">${pending}</div>
+      <div class="kpi-icon">⏳</div>
+      <div style="font-size:10px;color:#64748B;margin-top:4px">of ${bankTransactions.length} total</div>
+    </div>
+  `;
+}
+
+function renderBankTable() {
+  const typeF = document.getElementById('bank-type-filter')?.value || '';
+  const statusF = document.getElementById('bank-status-filter')?.value || '';
+
+  let filtered = bankTransactions.filter(t => {
+    const isPosted = bankPosted.has(t.id);
+    const status = isPosted ? 'Posted' : 'Pending';
+    if(typeF && t.type !== typeF) return false;
+    if(statusF && status !== statusF) return false;
+    return true;
+  });
+
+  if(!filtered.length) {
+    document.getElementById('bank-table-body').innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>No transactions match the filter</div>';
+    return;
+  }
+
+  document.getElementById('bank-table-body').innerHTML = `
+    <table>
+      <thead><tr>
+        <th><input type="checkbox" id="bank-check-all" onchange="bankToggleAll(this.checked)" style="cursor:pointer"></th>
+        <th>Txn ID</th><th>Date</th><th>Description</th><th>Ref No</th>
+        <th>Type</th><th>Amount (AED)</th><th>ERP Account</th><th>Status</th><th>Action</th>
+      </tr></thead>
+      <tbody>
+        ${filtered.map(t => {
+          const posted = bankPosted.has(t.id);
+          const statusBadge = posted
+            ? '<span class="badge badge-green">Posted</span>'
+            : '<span class="badge badge-amber">Pending</span>';
+          const typeBadge = t.type === 'Receipt'
+            ? '<span class="badge badge-green">Receipt</span>'
+            : '<span class="badge badge-red">Payment</span>';
+          const amtColor = t.type === 'Receipt' ? '#16A34A' : '#DC2626';
+          const sign = t.type === 'Receipt' ? '+' : '-';
+          return `<tr style="${posted?'opacity:.6':''}">
+            <td><input type="checkbox" class="bank-row-check" data-id="${t.id}" ${posted?'disabled':''} style="cursor:pointer"></td>
+            <td class="mono" style="font-size:11px">${t.id}</td>
+            <td class="mono" style="font-size:11px">${t.date}</td>
+            <td style="font-size:12px;max-width:200px">${t.description}</td>
+            <td class="mono" style="font-size:11px">${t.ref}</td>
+            <td>${typeBadge}</td>
+            <td class="mono" style="color:${amtColor};font-weight:600">${sign} ${fmt(t.amount)}</td>
+            <td style="font-size:11px;color:#64748B">${t.erp_account}</td>
+            <td>${statusBadge}</td>
+            <td>
+              ${posted
+                ? '<span style="font-size:11px;color:#16A34A">✓ Done</span>'
+                : `<button class="btn-dl btn-sm" style="font-size:11px" onclick="bankPostOne('${t.id}')">Post to ERP</button>`
+              }
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function bankToggleAll(checked) {
+  document.querySelectorAll('.bank-row-check:not(:disabled)').forEach(cb => cb.checked = checked);
+}
+
+function bankPostOne(id) {
+  bankPosted.add(id);
+  renderBankKPIs();
+  renderBankTable();
+  renderBankLog();
+  const t = bankTransactions.find(x => x.id === id);
+  notify(`✅ ${t?.description} posted to ERP — ${t?.erp_account}`, 'success');
+}
+
+function bankPostSelected() {
+  const selected = [...document.querySelectorAll('.bank-row-check:checked')].map(cb => cb.dataset.id);
+  if(!selected.length) { notify('No transactions selected', 'error'); return; }
+  selected.forEach(id => bankPosted.add(id));
+  renderBankKPIs();
+  renderBankTable();
+  renderBankLog();
+  document.getElementById('bank-posting-log').style.display = 'block';
+  notify(`✅ ${selected.length} transactions posted to ERP`, 'success');
+}
+
+function bankPostAll() {
+  const pending = bankTransactions.filter(t => !bankPosted.has(t.id));
+  if(!pending.length) { notify('All transactions already posted', 'info'); return; }
+  pending.forEach(t => bankPosted.add(t.id));
+  renderBankKPIs();
+  renderBankTable();
+  renderBankLog();
+  document.getElementById('bank-posting-log').style.display = 'block';
+  notify(`✅ All ${pending.length} pending transactions posted to ERP`, 'success');
+}
+
+function renderBankLog() {
+  const posted = bankTransactions.filter(t => bankPosted.has(t.id));
+  if(!posted.length) return;
+  document.getElementById('bank-posting-log').style.display = 'block';
+  const now = new Date().toLocaleString('en-AE');
+  document.getElementById('bank-log-body').innerHTML = `
+    <table>
+      <thead><tr><th>Posted At</th><th>Txn ID</th><th>Description</th><th>Type</th><th>Amount (AED)</th><th>Dr Account</th><th>Cr Account</th><th>Status</th></tr></thead>
+      <tbody>
+        ${posted.map(t => {
+          const dr = t.type === 'Receipt' ? '1001 - Bank Account' : t.erp_account;
+          const cr = t.type === 'Receipt' ? t.erp_account : '1001 - Bank Account';
+          return `<tr>
+            <td class="mono" style="font-size:11px">${now}</td>
+            <td class="mono" style="font-size:11px">${t.id}</td>
+            <td style="font-size:12px">${t.description}</td>
+            <td><span class="badge badge-${t.type==='Receipt'?'green':'red'}">${t.type}</span></td>
+            <td class="mono" style="font-weight:600">AED ${fmt(t.amount)}</td>
+            <td style="font-size:11px;color:#1D4ED8">${dr}</td>
+            <td style="font-size:11px;color:#16A34A">${cr}</td>
+            <td><span class="badge badge-green">Posted</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function bankDownloadJournal() {
+  if(!bankTransactions.length) { notify('No transactions to download', 'error'); return; }
+  const now = new Date().toLocaleString('en-AE');
+  let csv = 'Txn ID,Date,Description,Reference,Type,Amount,Dr Account,Cr Account,ERP Account,Status,Posted At\n';
+  bankTransactions.forEach(t => {
+    const posted = bankPosted.has(t.id);
+    const dr = t.type === 'Receipt' ? '1001 - Bank Account' : t.erp_account;
+    const cr = t.type === 'Receipt' ? t.erp_account : '1001 - Bank Account';
+    csv += `${t.id},${t.date},"${t.description}",${t.ref},${t.type},${t.amount},"${dr}","${cr}","${t.erp_account}",${posted?'Posted':'Pending'},${posted?now:''}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bank_journal_entries.csv'; a.click();
+  URL.revokeObjectURL(url);
+  notify('Journal downloaded as CSV', 'success');
+}
+
+
+// ── AI INTELLIGENCE LAYER PAGE ────────────────────────────────────
+function loadML() {
+  const el = document.getElementById('page-ml');
+  el.innerHTML = `
+  <div class="section-header">
+    <div>
+      <div class="section-title">🧠 AI Intelligence Layer</div>
+      <div class="section-sub">Machine learning services embedded in the Finance Intelligence Platform</div>
+    </div>
+    <span style="background:#EDE9FE;color:#6D28D9;border:1px solid #DDD6FE;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700">
+      🔬 5 AI / ML Models
+    </span>
+  </div>
+
+  <!-- Status banner -->
+  <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:20px">⚙️</span>
+    <div>
+      <div style="font-weight:700;font-size:13px;color:#1D4ED8;margin-bottom:2px">Backend ML Integration — Roadmap Phase 2</div>
+      <div style="font-size:12px;color:#3B82F6">The AI models below are architecturally designed and documented. Full scikit-learn backend integration is planned for Phase 2 deployment. This page demonstrates the intelligence layer design and simulated outputs.</div>
+    </div>
+  </div>
+
+  <!-- 5 AI Feature Cards -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+    <!-- Card 1 — Anomaly Detection -->
+    <div class="card" style="border-top:3px solid #0EA5E9">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:24px">🔍</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#0EA5E9">Anomaly Detection</div>
+          <div style="font-size:10px;color:#64748B;margin-top:1px">scikit-learn · Isolation Forest · Unsupervised ML</div>
+        </div>
+        <span style="margin-left:auto;background:#E0F2FE;color:#0284C7;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">UNSUPERVISED</span>
+      </div>
+      <p style="font-size:12px;color:#374151;margin-bottom:12px">Scans all reconciliation records to identify statistical outliers — unusual transaction amounts, duplicate entries, and atypical posting patterns — before they propagate into financial reports.</p>
+      <div style="background:#F0F9FF;border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:#0369A1;margin-bottom:8px">SIMULATED OUTPUT</div>
+        ${[
+          {inv:'INV-AF-003',vendor:'Al Futtaim Trading',amount:'AED 45,000',flag:'Amount 3.2σ above vendor avg',sev:'HIGH'},
+          {inv:'INV-ES-002',vendor:'Emirates Steel',amount:'AED 87,500',flag:'Duplicate date pattern detected',sev:'MED'},
+          {inv:'INV-DC-001',vendor:'Dubai Contracting',amount:'AED 12,000',flag:'Normal range',sev:'OK'},
+        ].map(r => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #E0F2FE;font-size:11px">
+          <span style="font-family:monospace;color:#0369A1;width:100px">${r.inv}</span>
+          <span style="flex:1;color:#374151">${r.vendor}</span>
+          <span style="color:#64748B;width:80px;text-align:right">${r.amount}</span>
+          <span style="flex:1;color:#64748B;font-style:italic">${r.flag}</span>
+          <span style="padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;${r.sev==='HIGH'?'background:#FEE2E2;color:#DC2626':r.sev==='MED'?'background:#FEF3C7;color:#D97706':'background:#DCFCE7;color:#16A34A'}">${r.sev}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Card 2 — Cashflow Prediction -->
+    <div class="card" style="border-top:3px solid #10B981">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:24px">📈</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#10B981">Cashflow Prediction</div>
+          <div style="font-size:10px;color:#64748B;margin-top:1px">Linear Regression · Time Series · Supervised ML</div>
+        </div>
+        <span style="margin-left:auto;background:#D1FAE5;color:#065F46;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">SUPERVISED</span>
+      </div>
+      <p style="font-size:12px;color:#374151;margin-bottom:12px">Trained on historical monthly AP and AR totals to forecast next-month cashflow position — shifting leadership from reactive reporting to predictive financial planning.</p>
+      <div style="background:#F0FDF4;border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:#065F46;margin-bottom:8px">SIMULATED FORECAST</div>
+        ${[
+          {month:'Jan 2025',ap:'AED 312K',ar:'AED 445K',net:'+AED 133K',trend:'▲'},
+          {month:'Feb 2025',ap:'AED 287K',ar:'AED 398K',net:'+AED 111K',trend:'▼'},
+          {month:'Mar 2025',ap:'AED 341K',ar:'AED 521K',net:'+AED 180K',trend:'▲'},
+          {month:'Apr 2025 ⟵ Predicted',ap:'AED 318K',ar:'AED 487K',net:'+AED 169K',trend:'▲'},
+        ].map((r,i) => `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #D1FAE5;font-size:11px;${i===3?'font-weight:700;color:#065F46':'color:#374151'}">
+          <span style="width:140px">${r.month}</span>
+          <span style="width:80px;color:#DC2626">${r.ap}</span>
+          <span style="width:80px;color:#16A34A">${r.ar}</span>
+          <span style="flex:1;color:#16A34A">${r.net} ${r.trend}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Card 3 — Invoice Risk Scoring -->
+    <div class="card" style="border-top:3px solid #F59E0B">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:24px">⚠️</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#D97706">Invoice Risk Scoring</div>
+          <div style="font-size:10px;color:#64748B;margin-top:1px">Logistic Regression · Risk Classification · Supervised ML</div>
+        </div>
+        <span style="margin-left:auto;background:#FEF3C7;color:#92400E;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">CLASSIFICATION</span>
+      </div>
+      <p style="font-size:12px;color:#374151;margin-bottom:12px">Predicts late payment probability per invoice based on vendor history, invoice amount brackets, and days-outstanding patterns — enabling dynamic prioritisation beyond static ageing buckets.</p>
+      <div style="background:#FFFBEB;border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:#92400E;margin-bottom:8px">SIMULATED RISK SCORES</div>
+        ${[
+          {inv:'INV-ES-004',vendor:'Emirates Steel',days:'32',score:'78%',risk:'HIGH'},
+          {inv:'INV-MF-003',vendor:'Majid Al Futtaim',days:'18',score:'41%',risk:'MED'},
+          {inv:'INV-LH-002',vendor:'Lulu Hypermarket',days:'8',score:'12%',risk:'LOW'},
+          {inv:'INV-CF-001',vendor:'Carrefour UAE',days:'25',score:'55%',risk:'MED'},
+        ].map(r => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #FDE68A;font-size:11px">
+          <span style="font-family:monospace;color:#92400E;width:95px">${r.inv}</span>
+          <span style="flex:1;color:#374151">${r.vendor}</span>
+          <span style="color:#64748B;width:50px">${r.days}d</span>
+          <span style="color:#374151;width:38px;font-weight:600">${r.score}</span>
+          <span style="padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;${r.risk==='HIGH'?'background:#FEE2E2;color:#DC2626':r.risk==='MED'?'background:#FEF3C7;color:#D97706':'background:#DCFCE7;color:#16A34A'}">${r.risk}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Card 4 — Duplicate Detection -->
+    <div class="card" style="border-top:3px solid #8B5CF6">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:24px">🔄</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#7C3AED">Duplicate Invoice Detection</div>
+          <div style="font-size:10px;color:#64748B;margin-top:1px">fuzzywuzzy · Fuzzy String Matching · Pattern Matching</div>
+        </div>
+        <span style="margin-left:auto;background:#EDE9FE;color:#5B21B6;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">PATTERN MATCH</span>
+      </div>
+      <p style="font-size:12px;color:#374151;margin-bottom:12px">Flags invoices sharing the same vendor, similar amounts, and proximate dates — catching duplicate payment risks that exact-match logic misses due to minor formatting variations in vendor documents.</p>
+      <div style="background:#F5F3FF;border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:#5B21B6;margin-bottom:8px">SIMULATED MATCHES</div>
+        ${[
+          {inv1:'INV-AF-003',inv2:'INV-AF-003A',vendor:'Al Futtaim',match:'97%',status:'⛔ Likely Duplicate'},
+          {inv1:'INV-ES-001',inv2:'INV-ES-001B',vendor:'Emirates Steel',match:'84%',status:'⚠️ Review Required'},
+          {inv1:'INV-DC-002',inv2:'INV-DC-009',vendor:'Dubai Contracting',match:'31%',status:'✅ Unique'},
+        ].map(r => `<div style="padding:6px 0;border-bottom:1px solid #DDD6FE;font-size:11px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-family:monospace;color:#5B21B6">${r.inv1}</span>
+            <span style="color:#94A3B8">↔</span>
+            <span style="font-family:monospace;color:#5B21B6">${r.inv2}</span>
+            <span style="background:#EDE9FE;color:#5B21B6;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;margin-left:4px">${r.match}</span>
+            <span style="margin-left:auto">${r.status}</span>
+          </div>
+          <div style="color:#64748B;margin-top:2px">${r.vendor}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Card 5 — AI Query & Auto Narrative (full width) -->
+  <div class="card" style="border-top:3px solid #EC4899">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:24px">💬</span>
+      <div>
+        <div style="font-weight:700;font-size:13px;color:#DB2777">AI Query Interface & Auto Narrative Generation</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px">NLP · Intent Classification · Rule Engine · Auto-NLG</div>
+      </div>
+      <span style="margin-left:auto;background:#FCE7F3;color:#9D174D;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">NLP + NLG</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <p style="font-size:12px;color:#374151;margin-bottom:10px">Answers plain-English finance questions from live data through a keyword-based intent classifier. Supports 10 financial query intents including AP summary, AR ageing, overdue vendors, cashflow, and party-wise statements.</p>
+        <div style="background:#FDF2F8;border-radius:8px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:#9D174D;margin-bottom:8px">SAMPLE QUERIES</div>
+          ${[
+            {q:'What is total payable this month?',r:'Total AP outstanding: AED 312,500 across 4 vendors'},
+            {q:'Show overdue customers',r:'3 customers overdue: Majid Al Futtaim, Carrefour, Lulu'},
+            {q:'AR ageing breakdown?',r:'0-30d: AED 180K · 31-60d: AED 95K · 60+d: AED 45K'},
+          ].map(s => `<div style="margin-bottom:8px">
+            <div style="font-size:11px;color:#374151;font-style:italic">❓ "${s.q}"</div>
+            <div style="font-size:11px;color:#DB2777;margin-top:2px;padding-left:12px">→ ${s.r}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <p style="font-size:12px;color:#374151;margin-bottom:10px">The NLG module auto-generates the monthly MIS executive narrative — a written summary of financial movements, outstanding risks, and cashflow position — eliminating the final manual step in the reporting cycle.</p>
+        <div style="background:#FDF2F8;border-radius:8px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:#9D174D;margin-bottom:8px">AUTO-GENERATED MIS NARRATIVE</div>
+          <div style="font-size:11px;color:#374151;line-height:1.7;font-style:italic">
+            "For March 2025, total Accounts Payable stood at AED 312,500 across 4 active vendors, with 2 invoices overdue beyond 45 days totalling AED 74,000. Accounts Receivable collections improved by 12% month-on-month, with net cashflow position at +AED 169,000. Three anomalies were detected in reconciliation data requiring controller review. Recommended action: prioritise collection from Majid Al Futtaim (AED 46,000 overdue) and release payment to Emirates Steel (AED 54,000 due)."
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom summary strip -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:4px">
+    ${[
+      {icon:'🔍',label:'Anomaly Detection',tech:'Isolation Forest'},
+      {icon:'📈',label:'Cashflow Prediction',tech:'Linear Regression'},
+      {icon:'⚠️',label:'Risk Scoring',tech:'Logistic Regression'},
+      {icon:'🔄',label:'Duplicate Detection',tech:'Fuzzy Matching'},
+      {icon:'💬',label:'AI Query + NLG',tech:'NLP + Auto-Narrative'},
+    ].map(m => `<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+      <div style="font-size:20px;margin-bottom:5px">${m.icon}</div>
+      <div style="font-size:10px;font-weight:700;color:#1A2332;margin-bottom:3px">${m.label}</div>
+      <div style="font-size:9px;color:#64748B">${m.tech}</div>
+    </div>`).join('')}
+  </div>
+  `;
+}
+
 // ── INIT ──────────────────────────────────────────────────────────
 // Never cache data pages — always reload fresh from API
 const staticPages = new Set(['reports']); // only static pages are cached
 function loadPage(id) {
   if(staticPages.has(id) && document.getElementById('page-'+id).innerHTML.trim()!='') return;
   ({dashboard:loadDashboard,ap:loadAP,ar:loadAR,reconciliation:loadReconciliation,
-    reports:loadReports,upload:loadUpload,ai:loadAI})[id]?.();
+    reports:loadReports,upload:loadUpload,ai:loadAI,bank:loadBank,ml:loadML})[id]?.();
 }
 
 buildNav();
