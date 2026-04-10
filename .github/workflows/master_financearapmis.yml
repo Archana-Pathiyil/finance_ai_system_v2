@@ -24,6 +24,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Verify startup.sh exists
+        run: |
+          ls -la finance_ai_system/backend/startup.sh
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
@@ -44,6 +48,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
+
+      - name: Verify downloaded files
+        run: |
+          echo "=== Root files ==="
+          ls -la
+          echo "=== Checking startup.sh ==="
+          ls -la startup.sh || echo "startup.sh NOT FOUND at root"
 
       - name: Login to Azure
         uses: azure/login@v2
