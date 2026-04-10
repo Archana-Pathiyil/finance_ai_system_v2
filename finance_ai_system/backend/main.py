@@ -1,15 +1,11 @@
 """
 Finance AI System - Main Application Entry Point
 """
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
-
-# Base directory of this file
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+import os
 
 from database import engine, Base
 from routers import upload, ap, ar, reconciliation, reports, ai_query, dashboard, mail
@@ -28,8 +24,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-#
-# CORS for React frontend
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -49,10 +45,9 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(mail.router, prefix="/api/mail", tags=["Mail"])
 
 
-# Serve frontend
-@app.get("/app", include_in_schema=False)
-def frontend():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+@app.get("/app")
+def serve_frontend():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
 
 
 @app.get("/")
